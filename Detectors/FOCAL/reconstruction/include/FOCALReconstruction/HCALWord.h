@@ -9,8 +9,8 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-#ifndef ALICEO2_FOCAL_PADWORD_H
-#define ALICEO2_FOCAL_PADWORD_H
+#ifndef ALICEO2_FOCAL_HCALWORD_H
+#define ALICEO2_FOCAL_HCALWORD_H
 
 #include <iosfwd>
 #include <gsl/span>
@@ -31,7 +31,9 @@ struct HCALASICWord {
     struct {
       uint32_t mADC : 10;
       uint32_t mTOA : 10;
-      uint32_t mTOT : 12; 
+      uint32_t mTOT : 10; 
+      uint32_t tc = 1; 
+      uint32_t tp = 1;
     }; // ASIC channel word
     uint32_t mData = 0;
   };
@@ -121,4 +123,4 @@ std::ostream& operator<<(std::ostream& stream, const TriggerWord& trigger);
 
 } // namespace o2::focal
 
-#endif // ALICEO2_FOCAL_PADWORD_H
+#endif // ALICEO2_FOCAL_HCALWORD_H

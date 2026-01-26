@@ -8,6 +8,7 @@
 // In applying this license CERN does not waive the privileges and immunities
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
+
 #ifndef ALICEO2_FOCAL_RAWDECODERSPEC_H
 #define ALICEO2_FOCAL_RAWDECODERSPEC_H
 
@@ -15,21 +16,31 @@
 #include <map>
 #include <unordered_map>
 #include <vector>
+#include <memory>
+#include <cstdint>
+
 #include <gsl/span>
+
 #include "Framework/DataProcessorSpec.h"
 #include "Framework/Task.h"
 #include "CommonDataFormat/InteractionRecord.h"
+
 #include "DataFormatsFOCAL/Event.h"
 #include "DataFormatsFOCAL/PixelHit.h"
 #include "DataFormatsFOCAL/PixelChipRecord.h"
 #include "DataFormatsFOCAL/TriggerRecord.h"
+
 #include "FOCALReconstruction/PadDecoder.h"
+#include "FOCALReconstruction/HCALDecoder.h"
 #include "FOCALReconstruction/PixelDecoder.h"
 #include "FOCALReconstruction/PixelMapper.h"
 
+
+#include "FOCALReconstruction/PadData.h"
+#include "FOCALReconstruction/HCALData.h"
+
 namespace o2::focal
 {
-
 class PixelChip;
 
 namespace reco_workflow
@@ -40,31 +51,53 @@ class RawDecoderSpec : public framework::Task
  public:
   struct HBFData {
     std::vector<std::array<PadLayerEvent, constants::PADS_NLAYERS>> mPadEvents;
+    std::vector<std::array<HCALPCBEvent, constants::HCAL_NPCBS>> mHCALEvents;
     std::vector<std::array<PixelLayerEvent, constants::PIXELS_NLAYERS>> mPixelEvent;
     std::vector<o2::InteractionRecord> mPixelTriggers;
     std::vector<std::vector<int>> mFEEs;
   };
+
   RawDecoderSpec() = default;
-  RawDecoderSpec(uint32_t outputSubspec, bool usePadData, bool usePixelData, bool debug) : mDebugMode(debug), mUsePadData(usePadData), mUsePixelData(usePixelData), mOutputSubspec(outputSubspec) {}
+  RawDecoderSpec(uint32_t outputSubspec, bool usePadData, bool usePixelData, bool useHcalData, bool debug)
+    : mDebugMode(debug),
+      mUsePadData(usePadData),
+      mUsePixelData(usePixelData),
+      mUseHcalData(useHcalData),
+      mOutputSubspec(outputSubspec)
+  {
+  }
   ~RawDecoderSpec() override = default;
 
   void init(framework::InitContext& ctx) final;
-
   void run(framework::ProcessingContext& ctx) final;
-
   void endOfStream(o2::framework::EndOfStreamContext& ec) final;
 
  private:
   void sendOutput(framework::ProcessingContext& ctx);
   void resetContainers();
+
   int decodePadData(const gsl::span<const char> padWords, o2::InteractionRecord& hbIR);
   void decodePadEvent(const gsl::span<const char> padWords, o2::InteractionRecord& hbIR);
-  int decodePixelData(const gsl::span<const char> pixelWords, o2::InteractionRecord& hbIR, int fecID);
-  std::array<PadLayerEvent, constants::PADS_NLAYERS> createPadLayerEvent(const o2::focal::PadData& data) const;
+
+  int decodeHcalData(const gsl::span<const char> hcalWords, o2::InteractionRecord& hbIR);
+  void decodeHcalEvent(const gsl::span<const char> hcalWords, o2::InteractionRecord& hbIR);
+
+  int decodePixelData(const gsl::span<const char> pixelWords, o2::InteractionRecord& hbIR, int feeID);
+
+  std::array<PadLayerEvent, constants::PADS_NLAYERS>
+    createPadLayerEvent(const o2::focal::PadData& data) const;
+
+  std::array<HCALPCBEvent, constants::HCAL_NPCBS>
+    createHcalPCBEvent(const o2::focal::HCALData& data) const;
+
   void fillChipToLayer(PixelLayerEvent& pixellayer, const PixelChip& chipData, int feeID);
-  void fillEventPixeHitContainer(std::vector<PixelHit>& eventHits, std::vector<PixelChipRecord>& eventChips, const PixelLayerEvent& pixelLayer, int layerIndex);
+  void fillEventPixeHitContainer(std::vector<PixelHit>& eventHits,
+                                 std::vector<PixelChipRecord>& eventChips,
+                                 const PixelLayerEvent& pixelLayer, int layerIndex);
+
   int filterIncompletePixelsEventsHBF(HBFData& data, const std::vector<int>& expectFEEs);
   void buildEvents();
+
   bool consistencyCheckPixelFEE(const std::unordered_map<int, int>& counters) const;
   int maxCounter(const std::unordered_map<int, int>& counters) const;
   void printCounters(const std::unordered_map<int, int>& counters) const;
@@ -76,38 +109,55 @@ class RawDecoderSpec : public framework::Task
   bool mDisplayInconsistent = false;
   bool mUsePadData = true;
   bool mUsePixelData = true;
+  bool mUseHcalData = false;
   bool mFilterIncomplete = false;
+
   bool mTimeframeHasPadData = false;
   bool mTimeframeHasPixelData = false;
+  bool mTimeframeHasHcalData = false;
+
   uint32_t mOutputSubspec = 0;
+
   PadDecoder mPadDecoder;
   PixelDecoder mPixelDecoder;
+  HCALDecoder mHcalDecoder;
   std::unique_ptr<PixelMapper> mPixelMapping;
+
   std::map<o2::InteractionRecord, HBFData> mHBFs;
+
   std::vector<TriggerRecord> mOutputTriggerRecords;
   std::vector<PixelHit> mOutputPixelHits;
   std::vector<PixelChipRecord> mOutputPixelChips;
   std::vector<PadLayerEvent> mOutputPadLayers;
+  std::vector<HCALPCBEvent> mOutputHcalPCBs;
 
-  // Some counters
   int mNumTimeframes = 0;
   int mNumHBFPads = 0;
+  int mNumHBFHcal = 0;
   int mNumHBFPixels = 0;
+
   int mNumEventsPads = 0;
   int mNumEventsPixels = 0;
+  int mNumEventsHcal = 0;
+
   int mNumInconsistencyPixelHBF = 0;
   int mNumInconsistencyPixelEvent = 0;
   int mNumInconsistencyPixelEventHBF = 0;
+
   std::map<int, int> mNumEventsHBFPads;
   std::map<int, int> mNumEventsHBFPixels;
+  std::map<int, int> mNumEventsHBFHcal;
+
   std::map<int, int> mNumHBFperTFPads;
   std::map<int, int> mNumHBFperTFPixels;
+  std::map<int, int> mNumHBFperTFHcal;
 };
 
-framework::DataProcessorSpec getRawDecoderSpec(bool askDISTSTF, uint32_t outputSubspec, bool usePadData, bool usePixelData, bool debugMode);
+framework::DataProcessorSpec getRawDecoderSpec(bool askDISTSTF, uint32_t outputSubspec,
+                                              bool usePadData, bool usePixelData,
+                                              bool useHcalData, bool debugMode);
 
 } // namespace reco_workflow
-
 } // namespace o2::focal
 
 #endif // ALICEO2_FOCAL_RAWDECODERSPEC_H
