@@ -109,7 +109,17 @@ void RawDecoderSpec::run(framework::ProcessingContext& ctx)
           LOG(debug) << "Found payload size:         " << payloadsize;
           LOG(debug) << "Found offset to next:       " << o2::raw::RDHUtils::getOffsetToNext(rdh);
           LOG(debug) << "Stop bit:                   " << (o2::raw::RDHUtils::getStop(rdh) ? "yes" : "no");
-          LOG(debug) << "Number of GBT words:        " << (payloadsize * sizeof(char) / (fee == FEE_PADS ? sizeof(o2::focal::PadGBTWord) : sizeof(o2::itsmft::GBTWord)));
+          // LOG(debug) << "Number of GBT words:        " << (payloadsize * sizeof(char) / (fee == FEE_PADS ? sizeof(o2::focal::PadGBTWord) : sizeof(o2::itsmft::GBTWord)));
+          size_t wordSize = 0;
+          if (fee == FEE_PADS) {
+            wordSize = sizeof(o2::focal::PadGBTWord);
+          } else if (fee == FEE_HCAL) {
+            wordSize = sizeof(o2::focal::HCALGBTWord);
+          } else {
+            wordSize = sizeof(o2::itsmft::GBTWord);
+          }
+          LOG(debug) << "Number of GBT words:        " << (wordSize ? (payloadsize / wordSize) : 0);
+
           auto page_payload = databuffer.subspan(currentpos + o2::raw::RDHUtils::getHeaderSize(rdh), payloadsize);
           std::copy(page_payload.begin(), page_payload.end(), std::back_inserter(rawbuffer));
         }
@@ -385,7 +395,9 @@ void RawDecoderSpec::decodeHcalEvent(const gsl::span<const char> hcalWords, o2::
     auto res = mHBFs.insert({hbIR, nexthbf});
     foundHBF = res.first;
   }
-  foundHBF->second.mHCALEvents.push_back(mHcalDecoder.getPCBData());
+
+  foundHBF->second.mHCALEvents.push_back(createHcalPCBEvent(mHcalDecoder.getData()));
+
 }
 
 int RawDecoderSpec::decodePixelData(const gsl::span<const char> pixelWords, o2::InteractionRecord& hbIR, int feeID)
@@ -499,30 +511,37 @@ std::array<o2::focal::PadLayerEvent, o2::focal::constants::PADS_NLAYERS> RawDeco
   return result;
 }
 
-std:array<o2::focal::HcalPCBData, o2::focal::constants::HCAL_NPCBS> RawDecoderSpec::createHcalPCBData(const std::array<o2::focal::HcalPCB, o2::focal::constants::HCAL_NPCBS>& pcbData) const
+std::array<HCALPCBEvent, constants::HCAL_NPCBS>
+RawDecoderSpec::createHcalPCBEvent(const o2::focal::HCALData& data) const
 {
-  std::array<HcalPCBData, constants::HCAL_NPCBS> result;
-  std::array<uint8_t, 8> triggertimes;
+  std::array<HCALPCBEvent, constants::HCAL_NPCBS> result{};
+  std::array<uint8_t, 8> triggertimes{};
 
-  for (std::size_t ipcb = 0; ipcb < constants::HCAL_NPCBS; ipcb++) {
-    auto& asic = data.getDataForASIC(ipcb).getASIC();
-    int bc[2];
-    for (std::size_t ihalf = 0; ihalf < constants::HCAL_MODULE_NHALVES; ihalf++) {
+  for (std::size_t ipcb = 0; ipcb < constants::HCAL_NPCBS; ++ipcb) {
+    const auto& asic = data.getDataForASIC(static_cast<int>(ipcb)).getASIC();
+
+    for (int ihalf = 0; ihalf < o2::focal::ASICData::NHALVES; ++ihalf) {
       auto header = asic.getHeader(ihalf);
-      bc[ihalf] = header.mBCID;
-      auto calib = asic.getCalib(ihalf);
-      auto cmn = asic.getCMN(ihalf);
-      result[ipcb].setHeader(ihalf, header.getHeader(), header.getBCID(), header.getWadd(), header.getFourbit(), header.getTrailer());
+      auto calib  = asic.getCalib(ihalf);
+      auto cmn    = asic.getCMN(ihalf);
+
+      result[ipcb].setHeader(ihalf,
+                             header.getHeader(), header.getBCID(),
+                             header.getWadd(), header.getFourbit(), header.getTrailer());
       result[ipcb].setCalib(ihalf, calib.getADC(), calib.getTOA(), calib.getTOT());
       result[ipcb].setCMN(ihalf, cmn.getADC(), cmn.getTOA(), cmn.getTOT());
     }
-    for (std::size_t ichannel = 0; ichannel < constants::PADLAYER_MODULE_NCHANNELS; ichannel++) {
-      auto channel = asic.getChannel(ichannel);
-      result[ipcb].setChannel(ichannel, channel.getADC(), channel.getTOA(), channel.getTOT());
+
+    for (int ich = 0; ich < o2::focal::ASICData::NCHANNELS; ++ich) {
+      auto channel = asic.getChannel(ich);
+      result[ipcb].setChannel(ich, channel.getADC(), channel.getTOA(), channel.getTOT());
     }
-    auto triggers = data.getDataForASIC(ipcb).getTriggerWords();
-    for (std::size_t window = 0; window < constants::HCAL_WINDOW_LENGTH; window++) {
-      std::fill(triggertimes.begin(), triggertimes.end(), 0);
+
+    auto triggers = data.getDataForASIC(static_cast<int>(ipcb)).getTriggerWords();
+    const auto nwin = std::min<std::size_t>(triggers.size(), constants::HCAL_WINDOW_LENGTH);
+
+    for (std::size_t window = 0; window < nwin; ++window) {
+      triggertimes.fill(0);
       triggertimes[0] = triggers[window].mTrigger0;
       triggertimes[1] = triggers[window].mTrigger1;
       triggertimes[2] = triggers[window].mTrigger2;
@@ -531,12 +550,14 @@ std:array<o2::focal::HcalPCBData, o2::focal::constants::HCAL_NPCBS> RawDecoderSp
       triggertimes[5] = triggers[window].mTrigger5;
       triggertimes[6] = triggers[window].mTrigger6;
       triggertimes[7] = triggers[window].mTrigger7;
-      result[ipcb].setTrigger(window, triggers[window].mHeader0, triggers[window].mHeader1, triggertimes);
 
+      result[ipcb].setTrigger(window, triggers[window].mHeader0, triggers[window].mHeader1, triggertimes);
     }
   }
+
   return result;
 }
+
 
 void RawDecoderSpec::fillChipToLayer(o2::focal::PixelLayerEvent& pixellayer, const o2::focal::PixelChip& chipData, int feeID)
 {

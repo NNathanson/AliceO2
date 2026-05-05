@@ -50,7 +50,7 @@ class ASICData
     std::string mMessage;
   };
 
-  static constexpr int NCHANNELS = 72;
+  static constexpr int NCHANNELS = 64;
   static constexpr int NHALVES = 2;
 
   ASICData() = default;
@@ -147,7 +147,7 @@ class HCALData
     int mMaxIndex;
     std::string mMessage;
   };
-  static constexpr int NASICS = 20;
+  static constexpr int NASICS = 4;
 
   HCALData() = default;
   ~HCALData() = default;

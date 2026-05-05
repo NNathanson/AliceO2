@@ -16,8 +16,14 @@ namespace o2::focal::constants
 constexpr int PADLAYER_MODULE_NCHANNELS = 72;
 constexpr int PADLAYER_MODULE_NHALVES = 2;
 constexpr int PADS_NLAYERS = 20;
+
+constexpr int HCAL_MODULE_NCHANNELS = 64;
+constexpr int HCAL_MODULE_NHALVES = 2; // --> halves of the HGCROC
+constexpr int HCAL_NPCBS = 4;
+
 constexpr int PIXELS_NLAYERS = 2;
 constexpr int PADLAYER_WINDOW_LENGTH = 20;
+constexpr int HCAL_WINDOW_LENGTH = 20;
 
 } // namespace o2::focal::constants
 

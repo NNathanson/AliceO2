@@ -91,6 +91,60 @@ class PixelLayerEvent
   ClassDefNV(PixelLayerEvent, 1);
 };
 
+class HCALEvent
+{
+ public:
+  struct Header {
+    uint8_t mHeader;
+    uint8_t mBC;
+    uint8_t mWADD;
+    uint8_t mFourbits;
+    uint8_t mTrailer;
+  };
+  struct Channel {
+    uint16_t mADC;
+    uint16_t mTOA;
+    uint16_t mTOT;
+    uint16_t tc;
+    uint16_t tp;
+  };
+  struct TriggerWindow {
+    uint32_t mHeader0;
+    uint32_t mHeader1;
+    std::array<uint8_t, 8> mTriggers;
+  };
+
+  void setHeader(unsigned int half, uint8_t header, uint8_t bc, uint8_t wadd, uint8_t fourbits, uint8_t trialer);
+  void setChannel(unsigned int channel, uint16_t adc, uint16_t toa, uint16_t tot);
+  void setCMN(unsigned int half, uint16_t adc, uint16_t toa, uint16_t tot);
+  void setCalib(unsigned int half, uint16_t adc, uint16_t toa, uint16_t tot);
+  void setTrigger(unsigned int window, uint32_t header0, uint32_t header1, const gsl::span<uint8_t> triggers);
+
+  const Header& getHeader(unsigned int half) const;
+  const Channel& getChannel(unsigned int channel) const;
+  const Channel& getCMN(unsigned int half) const;
+  const Channel& getCalib(unsigned int half) const;
+  const TriggerWindow& getTrigger(unsigned int window) const;
+
+  std::array<uint16_t, constants::HCAL_MODULE_NCHANNELS> getADCs() const;
+  std::array<uint16_t, constants::HCAL_MODULE_NCHANNELS> getTOAs() const;
+  std::array<uint16_t, constants::HCAL_MODULE_NCHANNELS> getTOTs() const;
+
+  void reset();
+
+ private:
+  void check_halfs(unsigned int half) const;
+  void check_channel(unsigned int channel) const;
+
+  std::array<Header, constants::HCAL_MODULE_NHALVES> mHeaders;
+  std::array<Channel, constants::HCAL_MODULE_NCHANNELS> mChannels;
+  std::array<Channel, constants::HCAL_MODULE_NHALVES> mCMN;
+  std::array<Channel, constants::HCAL_MODULE_NHALVES> mCalib;
+  std::array<TriggerWindow, constants::HCAL_WINDOW_LENGTH> mTriggers;
+  ClassDefNV(HCALEvent, 1);
+};
+
+
 class Event
 {
  public:
@@ -100,6 +154,10 @@ class Event
   PadLayerEvent& getPadLayer(unsigned int index);
   const PadLayerEvent& getPadLayer(unsigned int index) const;
   void setPadLayer(unsigned int layer, const PadLayerEvent& event);
+
+  HCALEvent* getHCALPCB(unsigned int index);
+  const HCALEvent& getHCALPCB(unsigned int index) const;
+  void setHCALPCB(unsigned int index, const HCALEvent& event);
 
   PixelLayerEvent& getPixelLayer(unsigned int index);
   const PixelLayerEvent& getPixelLayer(unsigned int index) const;
@@ -116,10 +174,12 @@ class Event
 
  private:
   void check_pad_layers(unsigned int index) const;
+  void check_hcal_layers(unsigned int index) const;
   void check_pixel_layers(unsigned int index) const;
 
   InteractionRecord mInteractionRecord;
   std::array<PadLayerEvent, constants::PADS_NLAYERS> mPadLayers;
+  std::array<HCALEvent, constants::HCAL_NPCBS> mHCALPCBs;
   std::array<PixelLayerEvent, constants::PIXELS_NLAYERS> mPixelLayers;
   bool mInitialized = false;
 

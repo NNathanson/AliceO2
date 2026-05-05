@@ -24,6 +24,9 @@ class IndexExceptionEvent : public std::exception
     PAD_NHALVES,
     PAD_CHANNEL,
     PIXEL_LAYER,
+    HCAL_LAYER,
+    HCAL_NHALVES,
+    HCAL_CHANNEL,
     TRIGGER_WINDOW
   };
   IndexExceptionEvent(unsigned int index, unsigned int maxindex, IndexType_t source);
@@ -47,3 +50,7 @@ std::ostream& operator<<(std::ostream& in, const IndexExceptionEvent& error);
 } // namespace o2::focal
 
 #endif
+
+constexpr int HCAL_MODULE_NCHANNELS = 64;
+constexpr int HCAL_MODULE_NHALVES = 2; // --> Module should be 4 pbs not two. Check if one can modify this 
+constexpr int HCAL_NPCBs = 4;

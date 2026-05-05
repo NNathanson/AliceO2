@@ -20,6 +20,10 @@
 #pragma link C++ class o2::focal::PadLayerEvent::Header + ;
 #pragma link C++ class o2::focal::PadLayerEvent::Channel + ;
 #pragma link C++ class o2::focal::PadLayerEvent::TriggerWindow + ;
+#pragma link C++ class o2::focal::HCALEvent + ;
+#pragma link C++ class o2::focal::HCALEvent::Header + ;
+#pragma link C++ class o2::focal::HCALEvent::Channel + ;
+#pragma link C++ class o2::focal::HCALEvent::TriggerWindow + ;
 #pragma link C++ class o2::focal::PixelLayerEvent + ;
 #pragma link C++ class o2::focal::PixelHit + ;
 #pragma link C++ class o2::focal::PixelChip + ;
@@ -28,6 +32,7 @@
 
 #pragma link C++ class std::vector < o2::focal::Event> + ;
 #pragma link C++ class std::vector < o2::focal::PadLayerEvent> + ;
+#pragma link C++ class std::vector < o2::focal::HCALEvent> + ;
 #pragma link C++ class std::vector < o2::focal::PixelHit> + ;
 #pragma link C++ class std::vector < o2::focal::PixelChip> + ;
 #pragma link C++ class std::vector < o2::focal::PixelChipRecord> + ;

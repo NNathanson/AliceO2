@@ -144,6 +144,7 @@ struct TrackletHCHeader {
       uint32_t side : 1;  // side of chamber
       uint32_t stack : 3;
       uint32_t layer : 3;
+      uint32_t index : 3; 
       uint32_t supermodule : 5;
       uint32_t one : 1;   //always 1
       uint32_t MCLK : 15; // MCM clock counter 120MHz ... for simulation -- incrementing, and uniform across an event

@@ -18,10 +18,16 @@ using namespace o2::focal;
 
 void TriggerRecord::printStream(std::ostream& stream) const
 {
-  stream << "Data for bc " << getBCData().bc << ", orbit " << getBCData().orbit
-         << ", [Pixels Chips] starting from entry " << getFirstPixelChipEntry() << " with " << getNumberOfPixelChipObjects()
-         << ", [Pixels Hits] starting from entry " << getFirstPixelHitEntry() << " with " << getNumberOfPixelHitObjects()
-         << " objects, [Pads] starting from entry " << getFirstPadEntry() << " with " << getNumberOfPadObjects();
+  stream << "Data for bc " << getBCData().bc
+         << ", orbit " << getBCData().orbit
+         << ", [Pads] starting from entry " << getFirstPadEntry()
+         << " with " << getNumberOfPadObjects()
+         << ", [HCAL] starting from entry " << getFirstHcalEntry()
+         << " with " << getNumberOfHcalObjects()
+         << ", [Pixels Chips] starting from entry " << getFirstPixelChipEntry()
+         << " with " << getNumberOfPixelChipObjects()
+         << ", [Pixels Hits] starting from entry " << getFirstPixelHitEntry()
+         << " with " << getNumberOfPixelHitObjects();
 }
 
 std::ostream& o2::focal::operator<<(std::ostream& stream, const TriggerRecord& trg)

@@ -50,11 +50,32 @@ void Event::setPixelLayerEvent(unsigned int layer, const PixelLayerEvent& event)
   mPixelLayers[layer] = event;
 }
 
+HCALEvent* Event::getHCALPCB(unsigned int index)
+{
+  check_hcal_layers(index);
+  return &mHCALPCBs[index];
+}
+
+const HCALEvent& Event::getHCALPCB(unsigned int index) const
+{
+  check_hcal_layers(index);
+  return mHCALPCBs[index];
+}
+
+void Event::setHCALPCB(unsigned int index, const HCALEvent& event)
+{
+  check_hcal_layers(index);
+  mHCALPCBs[index] = event;
+}
+
 void Event::reset()
 {
   mInitialized = false;
   for (auto& padlayer : mPadLayers) {
     padlayer.reset();
+  }
+  for (auto& hcallayer : mHCALPCBs) {
+    hcallayer.reset();
   }
   for (auto& pixellayer : mPixelLayers) {
     pixellayer.reset();
@@ -107,6 +128,13 @@ void Event::check_pixel_layers(unsigned int index) const
 {
   if (index >= constants::PIXELS_NLAYERS) {
     throw IndexExceptionEvent(index, constants::PIXELS_NLAYERS, IndexExceptionEvent::IndexType_t::PIXEL_LAYER);
+  }
+}
+
+void Event::check_hcal_layers(unsigned int index) const
+{
+  if (index >= constants::HCAL_NPCBS) {
+    throw IndexExceptionEvent(index, constants::HCAL_NPCBS, IndexExceptionEvent::IndexType_t::HCAL_LAYER);
   }
 }
 
@@ -284,4 +312,163 @@ void PixelLayerEvent::addChip(int feeID, int laneID, int chipID, uint16_t status
 void PixelLayerEvent::reset()
 {
   mChips.clear();
+}
+
+void HCALEvent::setHeader(unsigned int half, uint8_t header, uint8_t bc, uint8_t wadd, uint8_t fourbits, uint8_t trailer)
+{
+  check_halfs(half);
+  auto& asicheader = mHeaders[half];
+  asicheader.mHeader = header;
+  asicheader.mBC = bc;
+  asicheader.mFourbits = fourbits;
+  asicheader.mWADD = wadd;
+  asicheader.mTrailer = trailer;
+}
+
+void HCALEvent::setChannel(unsigned int channel, uint16_t adc, uint16_t toa, uint16_t tot)
+{
+  check_channel(channel);
+  auto& asicchannel = mChannels[channel];
+  asicchannel.mADC = adc;
+  asicchannel.mTOA = toa;
+  asicchannel.mTOT = tot;
+}
+
+void HCALEvent::setCMN(unsigned int half, uint16_t adc, uint16_t toa, uint16_t tot)
+{
+  check_halfs(half);
+  auto& cmn = mCMN[half];
+  cmn.mADC = adc;
+  cmn.mTOA = toa;
+  cmn.mTOT = tot;
+}
+
+void HCALEvent::setCalib(unsigned int half, uint16_t adc, uint16_t toa, uint16_t tot)
+{
+  check_halfs(half);
+  auto& calib = mCalib[half];
+  calib.mADC = adc;
+  calib.mTOA = toa;
+  calib.mTOT = tot;
+}
+
+void HCALEvent::setTrigger(unsigned int window, uint32_t header0, uint32_t header1, const gsl::span<uint8_t> triggers)
+{
+  if (window >= constants::HCAL_WINDOW_LENGTH) {
+    throw IndexExceptionEvent(window, constants::HCAL_WINDOW_LENGTH, IndexExceptionEvent::IndexType_t::TRIGGER_WINDOW);
+  }
+  auto& currenttrigger = mTriggers[window];
+  currenttrigger.mHeader0 = header0;
+  currenttrigger.mHeader1 = header1;
+  std::copy(triggers.begin(), triggers.end(), currenttrigger.mTriggers.begin());
+}
+
+const HCALEvent::Header& HCALEvent::getHeader(unsigned int half) const
+{
+  check_halfs(half);
+  return mHeaders[half];
+}
+
+const HCALEvent::Channel& HCALEvent::getChannel(unsigned int channel) const
+{
+  check_channel(channel);
+  return mChannels[channel];
+}
+
+const HCALEvent::Channel& HCALEvent::getCMN(unsigned int half) const
+{
+  check_halfs(half);
+  return mCMN[half];
+}
+
+const HCALEvent::Channel& HCALEvent::getCalib(unsigned int half) const
+{
+  check_halfs(half);
+  return mCalib[half];
+}
+
+const HCALEvent::TriggerWindow& HCALEvent::getTrigger(unsigned int window) const
+{
+  if (window >= constants::HCAL_WINDOW_LENGTH) {
+    throw IndexExceptionEvent(window, constants::HCAL_WINDOW_LENGTH, IndexExceptionEvent::IndexType_t::TRIGGER_WINDOW);
+  }
+  return mTriggers[window];
+}
+
+std::array<uint16_t, constants::HCAL_MODULE_NCHANNELS> HCALEvent::getADCs() const
+{
+  std::array<uint16_t, constants::HCAL_MODULE_NCHANNELS> adcs;
+  for (std::size_t ichan = 0; ichan < constants::HCAL_MODULE_NCHANNELS; ichan++) {
+    adcs[ichan] = mChannels[ichan].mADC;
+  }
+  return adcs;
+}
+
+std::array<uint16_t, constants::HCAL_MODULE_NCHANNELS> HCALEvent::getTOAs() const
+{
+  std::array<uint16_t, constants::HCAL_MODULE_NCHANNELS> toas;
+  for (std::size_t ichan = 0; ichan < constants::HCAL_MODULE_NCHANNELS; ichan++) {
+    toas[ichan] = mChannels[ichan].mTOA;
+  }
+  return toas;
+}
+
+std::array<uint16_t, constants::HCAL_MODULE_NCHANNELS> HCALEvent::getTOTs() const
+{
+  std::array<uint16_t, constants::HCAL_MODULE_NCHANNELS> tots;
+  for (std::size_t ichan = 0; ichan < constants::HCAL_MODULE_NCHANNELS; ichan++) {
+    tots[ichan] = mChannels[ichan].mTOT;
+  }
+  return tots;
+}
+
+void HCALEvent::reset()
+{
+  for (auto& header : mHeaders) {
+    header.mBC = 0;
+    header.mHeader = 0;
+    header.mFourbits = 0;
+    header.mWADD = 0;
+    header.mTrailer = 0;
+  }
+  for (auto& chan : mChannels) {
+    chan.mADC = 0;
+    chan.mTOA = 0;
+    chan.mTOT = 0;
+    chan.tc = 0;
+    chan.tp = 0;
+  }
+  for (auto& calib : mCalib) {
+    calib.mADC = 0;
+    calib.mTOA = 0;
+    calib.mTOT = 0;
+    calib.tc = 0;
+    calib.tp = 0;
+  }
+  for (auto& cmn : mCMN) {
+    cmn.mADC = 0;
+    cmn.mTOA = 0;
+    cmn.mTOT = 0;
+    cmn.tc = 0;
+    cmn.tp = 0;
+  }
+  for (auto& trg : mTriggers) {
+    trg.mHeader0 = 0;
+    trg.mHeader1 = 0;
+    std::fill(trg.mTriggers.begin(), trg.mTriggers.end(), 0);
+  }
+}
+
+void HCALEvent::check_halfs(unsigned int half) const
+{
+  if (half >= constants::HCAL_MODULE_NHALVES) {
+    throw IndexExceptionEvent(half, constants::HCAL_MODULE_NHALVES, IndexExceptionEvent::IndexType_t::HCAL_NHALVES);
+  }
+}
+
+void HCALEvent::check_channel(unsigned int channel) const
+{
+  if (channel >= constants::HCAL_MODULE_NCHANNELS) {
+    throw IndexExceptionEvent(channel, constants::HCAL_MODULE_NCHANNELS, IndexExceptionEvent::IndexType_t::HCAL_CHANNEL);
+  }
 }

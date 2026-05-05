@@ -30,6 +30,15 @@ IndexExceptionEvent::IndexExceptionEvent(unsigned int index, unsigned int maxind
     case IndexType_t::PIXEL_LAYER:
       nameIndexType = "pixel layer";
       break;
+    case IndexType_t::HCAL_CHANNEL:
+      nameIndexType = "HCAL channel";
+      break;
+    case IndexType_t::HCAL_LAYER:
+      nameIndexType = "HCAL layer";
+      break;
+    case IndexType_t::HCAL_NHALVES:
+      nameIndexType = "HCAL half";
+      break;
     case IndexType_t::TRIGGER_WINDOW:
       nameIndexType = "trigger window";
     default:
