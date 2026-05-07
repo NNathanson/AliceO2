@@ -219,7 +219,8 @@ class Geometry
   float mGlobal_HCAL_Pitch_Size = 0.0;        // Distance between two fibers
   float mGlobal_HCAL_BeamPipeHole_Size = 0.0; // beam pipe hole size in HCAL
   // HCALDesgin mHCALDesign = Sandwich;          // HCAL design type
-  HCALDesgin mHCALDesign = Spaghetti;          // HCAL design type
+  //HCALDesgin mHCALDesign = Spaghetti;          // HCAL design type
+  HCALDesgin mHCALDesign = Sheets;          // HCAL design type
 
   float mGlobal_FOCAL_Z0 = 0.0;
 
