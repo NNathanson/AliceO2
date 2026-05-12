@@ -22,7 +22,7 @@ void EventReader::init(TTree* eventTree)
 {
   mTreeReader = std::make_unique<TTreeReader>(eventTree);
   mPadBranch = std::make_unique<TTreeReaderValue<std::vector<PadLayerEvent>>>(*mTreeReader, "FOCALPadLayer");
-  mHCALBranch = std::make_unique<TTreeReaderValue<std::vector<HCALEvent>>>(*mTreeReader, "H2GCROC"); // --> Added by Tommaso
+  mHCALBranch = std::make_unique<TTreeReaderValue<std::vector<HCALEvent>>>(*mTreeReader, "FOCALHCAL"); // --> Added by Tommaso
   mPixelChipBranch = std::make_unique<TTreeReaderValue<std::vector<PixelChipRecord>>>(*mTreeReader, "FOCALPixelChip");
   mPixelHitBranch = std::make_unique<TTreeReaderValue<std::vector<PixelHit>>>(*mTreeReader, "FOCALPixelHit");
   mTriggerBranch = std::make_unique<TTreeReaderValue<std::vector<TriggerRecord>>>(*mTreeReader, "FOCALTrigger");
