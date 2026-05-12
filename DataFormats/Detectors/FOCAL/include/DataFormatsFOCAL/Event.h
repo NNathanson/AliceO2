@@ -168,7 +168,7 @@ class Event
 
   void reset();
 
-  void construct(const o2::InteractionRecord& interaction, gsl::span<const PadLayerEvent> pads, gsl::span<const PixelChipRecord> eventPixels, gsl::span<const PixelHit> pixelHits);
+  void construct(const o2::InteractionRecord& interaction, gsl::span<const PadLayerEvent> pads, gsl::span<const HCALEvent> hcal, gsl::span<const PixelChipRecord> eventPixels, gsl::span<const PixelHit> pixelHits);
 
   bool isInitialized() const { return mInitialized; }
 

@@ -82,7 +82,7 @@ void Event::reset()
   }
 }
 
-void Event::construct(const o2::InteractionRecord& interaction, gsl::span<const PadLayerEvent> pads, gsl::span<const PixelChipRecord> eventPixels, gsl::span<const PixelHit> pixelHits)
+void Event::construct(const o2::InteractionRecord& interaction, gsl::span<const PadLayerEvent> pads, gsl::span<const HCALEvent> hcal, gsl::span<const PixelChipRecord> eventPixels, gsl::span<const PixelHit> pixelHits)
 {
   reset();
   mInteractionRecord = interaction;
@@ -90,6 +90,12 @@ void Event::construct(const o2::InteractionRecord& interaction, gsl::span<const 
   for (auto& padlayer : pads) {
     mPadLayers[ilayer] = padlayer;
     ilayer++;
+  }
+
+  int ihcallayer = 0;
+  for (auto& hcallayer : hcal) {
+    mHCALPCBs[ihcallayer] = hcallayer;
+    ihcallayer++;
   }
 
   int currentlast = 0;
