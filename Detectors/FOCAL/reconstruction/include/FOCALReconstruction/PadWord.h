@@ -19,7 +19,7 @@
 namespace o2::focal
 {
 
-struct HCALASICWord {
+struct PadASICWord {
   union {
     struct {
       uint32_t mTrailer : 3;
@@ -55,7 +55,7 @@ struct TriggerWord {
   };
 };
 
-struct ASICHeader : public HCALASICWord {
+struct ASICHeader : public PadASICWord {
   ASICHeader()
   {
     mData = 0;
@@ -79,7 +79,7 @@ struct ASICHeader : public HCALASICWord {
   uint32_t getHeader() const { return mHeader; }
 };
 
-struct ASICChannel : public HCALASICWord {
+struct ASICChannel : public PadASICWord {
   ASICChannel()
   {
     mData = 0;
@@ -99,7 +99,7 @@ struct ASICChannel : public HCALASICWord {
   uint32_t getTOT() const { return mTOT; }
 };
 
-struct HCALGBTWord {
+struct PadGBTWord {
   union {
     uint64_t mTriggerWords[2];
     uint32_t mASICWords[4];
