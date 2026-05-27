@@ -39,18 +39,18 @@ void HCALDecoder::decodeEvent(gsl::span<const HCALGBTWord> gbtdata)
     // First part: ASIC words
     auto& asicdata = mData[iasic].getASIC();
     auto wordsthisAsic = asicwords.subspan(iasic * 39, 39);
-    auto headerwords = wordsthisAsic[0].getASICData<ASICHeader>();
+    auto headerwords = wordsthisAsic[0].getASICData<HCALASICHeader>();
     asicdata.setFirstHeader(headerwords[0]);
     asicdata.setSecondHeader(headerwords[1]);
     int nchannels = 0;
     for (auto& datawords : wordsthisAsic.subspan(1, 36)) {
-      for (auto& channelword : datawords.getASICData<ASICChannel>()) {
+      for (auto& channelword : datawords.getASICData<HCALASICChannel>()) {
         asicdata.setChannel(channelword, nchannels);
         nchannels++;
       }
     }
-    asicdata.setCMNs(wordsthisAsic[37].getASICData<ASICChannel>());
-    asicdata.setCalibs(wordsthisAsic[38].getASICData<ASICChannel>());
+    asicdata.setCMNs(wordsthisAsic[37].getASICData<HCALASICChannel>());
+    asicdata.setCalibs(wordsthisAsic[38].getASICData<HCALASICChannel>());
 
     // Second part: Trigger words
     auto wordsTriggerThisAsic = triggerwords.subspan(iasic * mWin_dur, mWin_dur);
