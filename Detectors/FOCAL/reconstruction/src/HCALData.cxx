@@ -107,8 +107,8 @@ gsl::span<const HCALASICChannel> HCALASICData::getCalibs() const
 
 HCALASICChannel HCALASICData::getCMN(int index) const
 {
-  if (index >= NCHANNELS) {
-    throw IndexException(index, NCHANNELS);
+  if (index >= NHALVES) {
+    throw IndexException(index, NHALVES);
   }
   return mCMNChannels[index];
 }
