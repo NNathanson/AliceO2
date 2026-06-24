@@ -66,13 +66,29 @@ class HCALMapper
     using std::runtime_error::runtime_error;
   };
 
+  class PCBMappingException : public std::runtime_error
+  {
+   public:
+    using std::runtime_error::runtime_error;
+  };
+
+  /// Describes the location of a PCB in terms of which ASIC and which
+  /// half of that ASIC it is wired to. asicIndex and halfIndex are
+  /// zero-based. Use this to translate a physical PCB number into the
+  /// indices needed to read the corresponding entry in an ASIC-centric
+  /// HCALEvent array.
+  struct PCBLocation {
+    unsigned int asicIndex = 0;
+    unsigned int halfIndex = 0;
+  };
+
   /// Default constructor does nothing. You must call loadMapping() before use.
   HCALMapper() = default;
 
-  /// Convenience constructor: loads mapping immediately.
+  /// Convenience constructor: loads channel mapping immediately.
   explicit HCALMapper(const std::string& mappingFile);
 
-  /// Load/replace mapping from file (8x8)
+  /// Load/replace channel mapping from file (8x8)
   void loadMapping(const std::string& mappingFile);
 
   /// channelID -> (col,row)
@@ -82,6 +98,30 @@ class HCALMapper
 
   /// (col,row) -> channelID
   unsigned int getChannelID(unsigned int col, unsigned int row) const;
+
+  /// Load the PCB-to-ASIC wiring from a file.
+  /// Expected format: one PCB per line, three comma-separated values:
+  ///   pcbIndex, asicIndex, halfIndex
+  /// Lines beginning with '#' or '//' are treated as comments.
+  /// Example for 6 PCBs across 3 ASICs (2 halves each):
+  ///   0, 0, 0
+  ///   1, 0, 1
+  ///   2, 1, 0
+  ///   3, 1, 1
+  ///   4, 2, 0
+  ///   5, 2, 1
+  void loadPCBMapping(const std::string& mappingFile);
+
+  /// Programmatically set the wiring for a single PCB. Useful for
+  /// tests or when the mapping is known at compile time.
+  void setPCBWiring(unsigned int pcbIndex, unsigned int asicIndex, unsigned int halfIndex);
+
+  /// Return the ASIC location for a given PCB index.
+  /// Throws PCBMappingException if the mapping has not been loaded or
+  /// pcbIndex is not present in the mapping.
+  PCBLocation getPCBLocation(unsigned int pcbIndex) const;
+
+  bool hasPCBMapping() const noexcept { return mPCBMappingLoaded; }
 
  private:
   using Coord = std::tuple<unsigned int, unsigned int>;
@@ -94,7 +134,11 @@ class HCALMapper
   // Inverse mapping: channelID -> (col,row)
   std::unordered_map<unsigned int, Coord> mInverseMapping;
 
+  // PCB wiring: pcbIndex -> (asicIndex, halfIndex)
+  std::unordered_map<unsigned int, PCBLocation> mPCBWiring;
+
   bool mLoaded = false;
+  bool mPCBMappingLoaded = false;
 };
 
 std::ostream& operator<<(std::ostream& stream, const HCALMapper::PositionException& except);

@@ -199,3 +199,79 @@ unsigned int HCALMapper::getColumn(unsigned int channelID) const
 {
   return std::get<0>(getRowColFromChannelID(channelID));
 }
+
+void HCALMapper::loadPCBMapping(const std::string& mappingFile)
+{
+  std::ifstream in(mappingFile);
+  if (!in.is_open()) {
+    throw PCBMappingException("HCALMapper: cannot open PCB mapping file: " + mappingFile);
+  }
+
+  mPCBWiring.clear();
+  std::string line;
+  int lineNum = 0;
+
+  while (std::getline(in, line)) {
+    ++lineNum;
+    // strip // and # comments
+    for (const auto& marker : {std::string("//"), std::string("#")}) {
+      const auto pos = line.find(marker);
+      if (pos != std::string::npos) {
+        line = line.substr(0, pos);
+      }
+    }
+    line = trim(line);
+    if (line.empty()) {
+      continue;
+    }
+
+    std::vector<unsigned int> values;
+    std::stringstream ss(line);
+    std::string token;
+    while (std::getline(ss, token, ',')) {
+      token = trim(token);
+      if (token.empty()) {
+        continue;
+      }
+      try {
+        values.push_back(static_cast<unsigned int>(std::stoul(token)));
+      } catch (...) {
+        throw PCBMappingException("HCALMapper: invalid token '" + token +
+                                  "' in PCB mapping file " + mappingFile +
+                                  " at line " + std::to_string(lineNum));
+      }
+    }
+
+    if (values.size() != 3) {
+      throw PCBMappingException("HCALMapper: expected 3 values (pcbIndex, asicIndex, halfIndex) in " +
+                                mappingFile + " at line " + std::to_string(lineNum) +
+                                " (got " + std::to_string(values.size()) + ")");
+    }
+
+    auto [it, inserted] = mPCBWiring.emplace(values[0], PCBLocation{values[1], values[2]});
+    if (!inserted) {
+      throw PCBMappingException("HCALMapper: duplicate PCB index " + std::to_string(values[0]) +
+                                " in file " + mappingFile);
+    }
+  }
+
+  mPCBMappingLoaded = !mPCBWiring.empty();
+}
+
+void HCALMapper::setPCBWiring(unsigned int pcbIndex, unsigned int asicIndex, unsigned int halfIndex)
+{
+  mPCBWiring[pcbIndex] = PCBLocation{asicIndex, halfIndex};
+  mPCBMappingLoaded = true;
+}
+
+HCALMapper::PCBLocation HCALMapper::getPCBLocation(unsigned int pcbIndex) const
+{
+  if (!mPCBMappingLoaded) {
+    throw PCBMappingException("HCALMapper: PCB mapping not loaded (call loadPCBMapping() or setPCBWiring())");
+  }
+  const auto it = mPCBWiring.find(pcbIndex);
+  if (it == mPCBWiring.end()) {
+    throw PCBMappingException("HCALMapper: unknown PCB index " + std::to_string(pcbIndex));
+  }
+  return it->second;
+}

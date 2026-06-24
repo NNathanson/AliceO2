@@ -19,6 +19,19 @@
 namespace o2::focal
 {
 
+//struct HCALLine {
+//  uint8_t   header_type;
+//  uint8_t   link_id;
+//  uint16_t  bx_cntr;
+//  uint32_t  ob_cntr;
+//  uint32_t  dw0;
+//  uint32_t  dw1;
+//  uint32_t  dw2;
+//  uint32_t  dw3;
+//  uint32_t  dw4;
+//  uint32_t  dw5;
+//};
+
 struct HCALASICWord {
   union {
     struct {
@@ -88,7 +101,7 @@ struct HCALASICChannel : public HCALASICWord {
   }
   HCALASICChannel(uint32_t word)
   {
-    mData = 0;
+    mData = word;
   }
   HCALASICChannel(uint32_t adc, uint32_t toa, uint32_t tot)
   {

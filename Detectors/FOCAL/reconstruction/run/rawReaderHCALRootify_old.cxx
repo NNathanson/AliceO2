@@ -21,33 +21,43 @@
 #include <TFile.h>
 #include <TTree.h>
 
-
 #include "CommonConstants/Triggers.h"
 #include "DetectorsRaw/RawFileReader.h"
 #include "DetectorsRaw/RDHUtils.h"
-#include "FOCALReconstruction/HCalDataWord.h"
-#include "FOCALReconstruction/HCalGBTLink.h"
+#include "FOCALReconstruction/HCALWord.h"
 #include "FOCALReconstruction/HCALDecoder.h"
 #include "Headers/RDHAny.h"
-#include "DataFormatsFOCAL/Constants.h"
 
 namespace bpo = boost::program_options;
 
 // Data for tree
 struct HCALTreeData {
-  static constexpr int NSAMPLES  = o2::focal::constants::HCAL_NUM_SAMPLES_PER_EVENT; // 16
-  static constexpr int NLINKS    = o2::focal::constants::HCAL_NUM_GBT_LINKS;         // 2
-  static constexpr int NROCS     = o2::focal::constants::HCAL_NUM_ROCS_PER_LINK;     // 2
-  static constexpr int NHALVES   = 2;
-  static constexpr int NCHANNELS = o2::focal::constants::HCAL_NUM_CHANNELS_PER_ROC_HALF; // 36
+  static constexpr int NASICS = 4; // 1for each SIPM array.
+  static constexpr int NCHANNELS = 64;
+  static constexpr int WINDUR = 20;
+  static constexpr int NTRIGGER = 8;
 
   int mBCid;
   int mOrbit;
-  int mADC[NSAMPLES][NLINKS][NROCS][NHALVES][NCHANNELS];
-  int mTOA[NSAMPLES][NLINKS][NROCS][NHALVES][NCHANNELS];
-  int mTOT[NSAMPLES][NLINKS][NROCS][NHALVES][NCHANNELS];
-  int mCalib0[NROCS];
-  int mCalib1[NROCS];
+  int mHeader0[NASICS];
+  int mFOURBIT0[NASICS];
+  int mWADD0[NASICS];
+  int mBCID0[NASICS];
+  int mTrailer0[NASICS];
+  int mHeader1[NASICS];
+  int mFOURBIT1[NASICS];
+  int mWADD1[NASICS];
+  int mBCID1[NASICS];
+  int mTrailer1[NASICS];
+  int mASICNum[NASICS];
+  int mADC[NASICS][NCHANNELS];
+  int mTOA[NASICS][NCHANNELS];
+  int mTOT[NASICS][NCHANNELS];
+  int mCalib0[NASICS];
+  int mCalib1[NASICS];
+  int mTriggerhead0[NASICS][WINDUR];
+  int mTriggerhead1[NASICS][WINDUR];
+  int mTriggerdata[NASICS][NTRIGGER][WINDUR];
 
   TTree* mTree = nullptr;
 
@@ -56,23 +66,50 @@ struct HCALTreeData {
     mTree = hcaltree;
     mTree->Branch("ORBIT", &mOrbit, "ORBIT/I");
     mTree->Branch("BCID", &mBCid, "BCID/I");
-    mTree->Branch("ADC", &mADC, "ADC[16][2][2][2][36]/I");
-    mTree->Branch("TOA", &mTOA, "TOA[16][2][2][2][36]/I");
-    mTree->Branch("TOT", &mTOT, "TOT[16][2][2][2][36]/I");
-    mTree->Branch("CALIB0", &mCalib0, "CALIB0[2]/I");
-    mTree->Branch("CALIB1", &mCalib1, "CALIB1[2]/I");
-
+    mTree->Branch("HEAD0", &mHeader0, "HEAD0[20]/I");
+    mTree->Branch("FOURBIT0", &mFOURBIT0, "FOURBIT0[20]/I");
+    mTree->Branch("BCID0", &mBCID0, "BCID0[20]/I");
+    mTree->Branch("WADD0", &mWADD0, "WADD0[20]/I");
+    mTree->Branch("TRAILER0", &mTrailer0, "TRAILER0[20]/I");
+    mTree->Branch("HEAD1", &mHeader1, "HEAD1[20]/I");
+    mTree->Branch("FOURBIT1", &mFOURBIT1, "FOURBIT1[20]/I");
+    mTree->Branch("BCID1", &mBCID1, "BCID1[20]/I");
+    mTree->Branch("WADD1", &mWADD1, "WADD1[20]/I");
+    mTree->Branch("TRAILER1", &mTrailer1, "TRAILER1[20]/I");
+    mTree->Branch("ASIC", &mASICNum, "ASICNum[20]/I");
+    mTree->Branch("ADC", &mADC, "ADC[20][64]/I");
+    mTree->Branch("TOA", &mTOA, "TOA[20][64]/I");
+    mTree->Branch("TOT", &mTOT, "TOT[20][64]/I");
+    mTree->Branch("CALIB0", &mCalib0, "CALIB0[20]/I");
+    mTree->Branch("CALIB1", &mCalib1, "CALIB1[20]/I");
+    mTree->Branch("TRIGHEADER0", &mTriggerhead0, "TRIGHEADER0[20][20]/I");
+    mTree->Branch("TRIGHEADER1", &mTriggerhead1, "TRIGHEADER1[20][20]/I");
+    mTree->Branch("TRIGDATA", &mTriggerdata, "TRIGDATA[20][8][20]/I");
   }
 
   void reset()
   {
     mBCid = 0;
     mOrbit = 0;
-    memset(mADC, 0, sizeof(mADC));
-    memset(mTOA, 0, sizeof(mTOA));
-    memset(mTOT, 0, sizeof(mTOT));
-    memset(mCalib0, 0, sizeof(mCalib0));
-    memset(mCalib1, 0, sizeof(mCalib1));
+    memset(mHeader0, 0, sizeof(int) * 20);
+    memset(mFOURBIT0, 0, sizeof(int) * 20);
+    memset(mBCID0, 0, sizeof(int) * 20);
+    memset(mWADD0, 0, sizeof(int) * 20);
+    memset(mTrailer0, 0, sizeof(int) * 20);
+    memset(mHeader1, 0, sizeof(int) * 20);
+    memset(mFOURBIT1, 0, sizeof(int) * 20);
+    memset(mBCID1, 0, sizeof(int) * 20);
+    memset(mWADD1, 0, sizeof(int) * 20);
+    memset(mTrailer1, 0, sizeof(int) * 20);
+    memset(mASICNum, 0, sizeof(int) * 20);
+    memset(mADC, 0, sizeof(int) * 20 * 64);
+    memset(mTOA, 0, sizeof(int) * 20 * 64);
+    memset(mTOT, 0, sizeof(int) * 20 * 64);
+    memset(mCalib0, 0, sizeof(int) * 20);
+    memset(mCalib1, 0, sizeof(int) * 20);
+    memset(mTriggerhead0, 0, sizeof(int) * 20 * 20);
+    memset(mTriggerhead1, 0, sizeof(int) * 20 * 20);
+    memset(mTriggerdata, 0, sizeof(int) * 20 * 8 * 20);
   }
 
   void setInteractionRecord(const o2::InteractionRecord& ir)
@@ -81,23 +118,41 @@ struct HCALTreeData {
     mOrbit = ir.orbit;
   }
 
-  void fill(const std::array<std::array<o2::focal::HCalGBTLink, NLINKS>, NSAMPLES>& links)
+  void fill(const o2::focal::HCALData& data)
   {
-    for (int sample = 0; sample < NSAMPLES; ++sample) {
-      for (int link_id = 0; link_id < NLINKS; ++link_id) {
-        auto currentLink = links[sample][link_id];
-        for (int roc_id = 0; roc_id < NROCS; ++roc_id) {
-          auto currentROC = currentLink.getROC(roc_id);
-          for (int half = 0; half < NHALVES; ++half) {
-            auto currentHalf = currentROC.getChipHalf(half);
-            for (int chn = 0; chn < NCHANNELS; ++chn) {
-              auto ch = currentHalf.getChannel(chn);
-              mADC[sample][link_id][roc_id][half][chn] = ch.adc();
-              mTOT[sample][link_id][roc_id][half][chn] = ch.tot();
-              mTOA[sample][link_id][roc_id][half][chn] = ch.toa();
-            }
-          }
-        }
+    for (int iasic = 0; iasic < NASICS; iasic++) {
+      auto& asicdata = data.getDataForASIC(iasic);
+      auto& asicraw = asicdata.getASIC();
+      mASICNum[iasic] = iasic;
+      mHeader0[iasic] = asicraw.getFirstHeader().mHeader;
+      mFOURBIT0[iasic] = asicraw.getFirstHeader().mFourbit;
+      mBCID0[iasic] = asicraw.getFirstHeader().mBCID;
+      mWADD0[iasic] = asicraw.getFirstHeader().mWADD;
+      mTrailer0[iasic] = asicraw.getFirstHeader().mTrailer;
+      mHeader1[iasic] = asicraw.getSecondHeader().mHeader;
+      mFOURBIT1[iasic] = asicraw.getSecondHeader().mFourbit;
+      mBCID1[iasic] = asicraw.getSecondHeader().mBCID;
+      mWADD1[iasic] = asicraw.getSecondHeader().mWADD;
+      mTrailer1[iasic] = asicraw.getSecondHeader().mTrailer;
+      mCalib0[iasic] = asicraw.getFirstCalib().mADC;
+      mCalib1[iasic] = asicraw.getSecondCalib().mADC;
+      for (auto ichannel = 0; ichannel < NCHANNELS; ichannel++) {
+        mADC[iasic][ichannel] = asicraw.getChannel(ichannel).getADC();
+        mTOT[iasic][ichannel] = asicraw.getChannel(ichannel).getTOT();
+        mTOA[iasic][ichannel] = asicraw.getChannel(ichannel).getTOA();
+      }
+      auto triggerdata = asicdata.getTriggerWords();
+      for (auto iwin = 0; iwin < WINDUR; iwin++) {
+        mTriggerhead0[iasic][iwin] = triggerdata[iwin].mHeader0;
+        mTriggerhead1[iasic][iwin] = triggerdata[iwin].mHeader1;
+        mTriggerdata[iasic][0][iwin] = triggerdata[iwin].mTrigger0;
+        mTriggerdata[iasic][1][iwin] = triggerdata[iwin].mTrigger1;
+        mTriggerdata[iasic][2][iwin] = triggerdata[iwin].mTrigger2;
+        mTriggerdata[iasic][3][iwin] = triggerdata[iwin].mTrigger3;
+        mTriggerdata[iasic][4][iwin] = triggerdata[iwin].mTrigger4;
+        mTriggerdata[iasic][5][iwin] = triggerdata[iwin].mTrigger5;
+        mTriggerdata[iasic][6][iwin] = triggerdata[iwin].mTrigger6;
+        mTriggerdata[iasic][7][iwin] = triggerdata[iwin].mTrigger7;
       }
     }
   }
@@ -110,19 +165,21 @@ struct HCALTreeData {
 
 int convertHCALData(gsl::span<const char> hcalrawdata, const o2::InteractionRecord& currentir, HCALTreeData& rootified)
 {
-    o2::focal::HCALDecoder decoder;
+  auto payloadsizeGBT = hcalrawdata.size() * sizeof(char) / sizeof(o2::focal::HCALGBTWord);
+  auto gbtdata = gsl::span<const o2::focal::HCALGBTWord>(reinterpret_cast<const o2::focal::HCALGBTWord*>(hcalrawdata.data()), payloadsizeGBT);
+  o2::focal::HCALDecoder decoder;
 
-  decoder.reset();
-  decoder.decodeBuffer(hcalrawdata);   
-  if (!decoder.hasEventData()) { return 0; }
-
-  auto links = decoder.getData();  
-  rootified.reset();
-  rootified.setInteractionRecord(currentir);
-  rootified.fill(links);
-  rootified.fillTree();
-  return 1;
-
+  constexpr std::size_t EVENTSIZEHCALGBT = 1180;
+  int nevents = gbtdata.size() / EVENTSIZEHCALGBT;
+  for (int iev = 0; iev < nevents; iev++) {
+    decoder.reset();
+    rootified.reset();
+    decoder.decodeEvent(gbtdata.subspan(iev * EVENTSIZEHCALGBT, EVENTSIZEHCALGBT));
+    rootified.setInteractionRecord(currentir);
+    rootified.fill(decoder.getData());
+    rootified.fillTree();
+  }
+  return nevents;
 }
 
 int main(int argc, char** argv)
@@ -202,26 +259,19 @@ int main(int argc, char** argv)
     readout = o2::raw::RawFileReader::CRU;
   }
 
-  const bool isCfgFile = rawfilename.size() > 4 &&
-                         rawfilename.compare(rawfilename.size() - 4, 4, ".cfg") == 0;
-  o2::raw::RawFileReader reader(isCfgFile ? rawfilename : "");
+  o2::raw::RawFileReader reader;
   reader.setDefaultDataOrigin(o2::header::gDataOriginFOC);
   reader.setDefaultDataDescription(o2::header::gDataDescriptionRawData);
   reader.setDefaultReadoutCardType(readout);
-  if (!isCfgFile) {
-    for (auto rawfile : inputfiles) {
-      LOG(debug) << "Adding " << rawfile << " to raw reader";
-      reader.addFile(rawfile);
-    }
-  } else {
-    LOG(info) << "Reading file list from config: " << rawfilename;
+  for (auto rawfile : inputfiles) {
+    LOG(debug) << "Adding " << rawfile << " to raw reader";
+    reader.addFile(rawfile);
   }
   reader.init();
 
   std::unique_ptr<TFile> rootfilewriter(TFile::Open(rootfilename.data(), "RECREATE"));
   rootfilewriter->cd();
   TTree* hcaltree = new TTree("HCALData", "HCALData");
-  hcaltree->SetAutoSave(0); //added to avoid partial duplicates being saved in the root tree, uncomment to change this for backup purposes
   HCALTreeData rootified;
   rootified.connectTree(hcaltree);
 

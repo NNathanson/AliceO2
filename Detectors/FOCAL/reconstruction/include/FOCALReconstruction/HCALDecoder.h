@@ -21,6 +21,9 @@
 #include <gsl/span>
 
 #include "FOCALReconstruction/HCALData.h"
+#include "FOCALReconstruction/HCalDataWord.h"
+#include "FOCALReconstruction/HCalGBTLink.h"
+#include "DataFormatsFOCAL/Constants.h"
 
 namespace o2::focal
 {
@@ -30,16 +33,31 @@ class HCALDecoder
   HCALDecoder() = default;
   ~HCALDecoder() = default;
 
-  void setTriggerWinDur(int windur) { mWin_dur = windur; }
+  void setTriggerWinDur(int windur) { mWin_dur = windur; } // unused?
 
   void reset();
-  void decodeEvent(gsl::span<const HCALGBTWord> padpayload);
-  const HCALData& getData() const { return mData; }
+  void decodeBuffer(gsl::span<const char> buffer);
+  //void decodeEvent(gsl::span<const HCALGBTWord> padpayload);
+  //const HCALData& getData() const { return mData; }
 
- protected:
+  bool isNullLine(HCalGBTLine line);
+  bool isIdleLine(HCalGBTLine line);
+  bool isTriggerLine(HCalGBTLine line);
+  bool hasEventData() { return mHasData; }
+  
+  std::array<int, constants::HCAL_NUM_GBT_LINKS> getNumSamplesRead() { return mLinkSampleCounters; }
+  std::array<std::array<HCalGBTLink, constants::HCAL_NUM_GBT_LINKS>, constants::HCAL_NUM_SAMPLES_PER_EVENT> getData() { return mLinks; }
+ // std::array<HCalGBTLink, 2> getDataNew() { return mLinks; }
+
  private:
-  int mWin_dur = 20;
-  HCALData mData;
+  int mWin_dur = 20; // unused?
+  //HCALData mData; // replace
+  bool mHasData;
+
+  std::array<std::array<HCalGBTLink, constants::HCAL_NUM_GBT_LINKS>, constants::HCAL_NUM_SAMPLES_PER_EVENT> mLinks = {};
+  std::array<int, constants::HCAL_NUM_GBT_LINKS> mLinkLineCounters = {};
+  std::array<int, constants::HCAL_NUM_GBT_LINKS> mLinkSampleCounters = {};
+  std::array<bool, constants::HCAL_NUM_GBT_LINKS> mLinkFrameActive = {};
 
   ClassDefNV(HCALDecoder, 1);
 };

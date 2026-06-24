@@ -16,8 +16,12 @@ o2_add_library(FOCALReconstruction
         src/PadMapper.cxx
         src/HCALWord.cxx
         src/HCALData.cxx
-        src/HCALDecoder.cxx
         src/HCALMapper.cxx
+        src/HCALDecoder.cxx
+        src/HCalDataWord.cxx
+        src/HCalROCDataLink.cxx
+        src/HCalROC.cxx
+        src/HCalGBTLink.cxx
         src/PixelLaneData.cxx
         src/PixelDecoder.cxx
         src/PixelMapper.cxx
@@ -31,8 +35,11 @@ o2_target_root_dictionary(
         include/FOCALReconstruction/PadDecoder.h
         include/FOCALReconstruction/PadMapper.h
         include/FOCALReconstruction/HCALData.h
-        include/FOCALReconstruction/HCALDecoder.h
         include/FOCALReconstruction/HCALMapper.h
+        include/FOCALReconstruction/HCALDecoder.h
+        include/FOCALReconstruction/HCalROCDataLink.h
+        include/FOCALReconstruction/HCalROC.h
+        include/FOCALReconstruction/HCalGBTLink.h
         include/FOCALReconstruction/PixelMapper.h
         include/FOCALReconstruction/PixelDecoder.h
         include/FOCALReconstruction/PixelLaneData.h

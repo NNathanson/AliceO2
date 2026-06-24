@@ -427,32 +427,79 @@ int RawDecoderSpec::decodeHcalData(const gsl::span<const char> hcalWords, o2::In
 
 void RawDecoderSpec::decodeHcalEvent(const gsl::span<const char> hcalWords, o2::InteractionRecord& hbIR)
 {
-  gsl::span<const HCALGBTWord> hcalWordsGBT(reinterpret_cast<const HCALGBTWord*>(hcalWords.data()),
-                                           hcalWords.size() / sizeof(HCALGBTWord));
+  // gsl::span<const HCALGBTWord> hcalWordsGBT(reinterpret_cast<const HCALGBTWord*>(hcalWords.data()),
+  //                                          hcalWords.size() / sizeof(HCALGBTWord));
 
-  mHcalDecoder.reset();
-  mHcalDecoder.decodeEvent(hcalWordsGBT);
+  // mHcalDecoder.reset();
+  // mHcalDecoder.decodeEvent(hcalWordsGBT);
 
-  auto foundHBF = mHBFs.find(hbIR);
-  if (foundHBF == mHBFs.end()) {
-    auto res = mHBFs.insert({hbIR, HBFData{}});
-    foundHBF = res.first;
-  }
+  // auto foundHBF = mHBFs.find(hbIR);
+  // if (foundHBF == mHBFs.end()) {
+  //   auto res = mHBFs.insert({hbIR, HBFData{}});
+  //   foundHBF = res.first;
+  // }
 
-  // IMPORTANT: HCALDecoder exposes getData() (HCALData), convert it to HCALPCBEvent array
-  foundHBF->second.mHCALEvents.push_back(createHcalPCBEvent(mHcalDecoder.getData()));
+  // // IMPORTANT: HCALDecoder exposes getData() (HCALData), convert it to HCALPCBEvent array
+  // foundHBF->second.mHCALEvents.push_back(createHcalPCBEvent(mHcalDecoder.getData()));
 }
 
-std::array<HCALEvent, constants::HCAL_NPCBS>
+std::array<HCALEvent, constants::HCAL_NASICS>
 RawDecoderSpec::createHcalPCBEvent(const o2::focal::HCALData& data) const
 {
-  std::array<HCALEvent, constants::HCAL_NPCBS> result{};
+  std::array<HCALEvent, constants::HCAL_NASICS> result{}; //used to be constants::HCAL_NPCBS
   std::array<uint8_t, 8> triggertimes{};
 
+  //Chip test 1 (new method testing)
+  for (std::size_t asicIndex = 0; asicIndex < constants::HCAL_NASICS; ++asicIndex){
+    const auto& cont = data.getDataForASIC(asicIndex);
+    const auto& asic = cont.getASIC();
+
+    for(std::size_t ihalf = 0; ihalf < o2::focal::HCALASICData::NHALVES; ++ihalf){
+      const int ipcb = asicIndex%o2::focal::HCALASICData::NHALVES + ihalf; //do better mapping at some point, maybe with config file?
+
+      //If statement to catch edge case where not all asic halves are used so an uneven number of pcbs are included in the run (e.g. 3 asics and 5 pcbs)
+      if(ipcb+1 > constants::HCAL_NPCBS){break;}
+      
+      const auto header = asic.getHeader(ihalf);
+      const auto calib  = asic.getCalib(ihalf);
+      const auto cmn    = asic.getCMN(ihalf);
+
+      result[asicIndex].setHeader(ihalf, header.getHeader(), header.getBCID(),
+                             header.getWadd(), header.getFourbit(), header.getTrailer());
+      result[asicIndex].setCalib(ihalf, calib.getADC(), calib.getTOA(), calib.getTOT());
+      result[asicIndex].setCMN(ihalf, cmn.getADC(), cmn.getTOA(), cmn.getTOT());
+      
+    }
+
+    for (int ich = 0; ich < o2::focal::HCALASICData::NCHANNELS; ++ich) {
+      const auto ch = asic.getChannel(ich);
+      result[asicIndex].setChannel(ich, ch.getADC(), ch.getTOA(), ch.getTOT());
+    }
+
+    const auto triggers = cont.getTriggerWords();
+    const auto nwin = std::min<std::size_t>(triggers.size(), constants::HCAL_WINDOW_LENGTH);
+
+    for (std::size_t window = 0; window < nwin; ++window) {
+      triggertimes.fill(0);
+      triggertimes[0] = triggers[window].mTrigger0;
+      triggertimes[1] = triggers[window].mTrigger1;
+      triggertimes[2] = triggers[window].mTrigger2;
+      triggertimes[3] = triggers[window].mTrigger3;
+      triggertimes[4] = triggers[window].mTrigger4;
+      triggertimes[5] = triggers[window].mTrigger5;
+      triggertimes[6] = triggers[window].mTrigger6;
+      triggertimes[7] = triggers[window].mTrigger7;
+
+      result[asicIndex].setTrigger(window, triggers[window].mHeader0, triggers[window].mHeader1, triggertimes);
+    }
+  }
+  
   // NOTE:
   // This assumes PCB 1..4 correspond to ASIC indices 0..3 in HCALData.
   // If a different mapping is needed  one couldchange `asicIndex` accordingly.
-  for (std::size_t ipcb = 0; ipcb < constants::HCAL_NPCBS; ++ipcb) {
+  
+  //Original (old method)
+  /*for (std::size_t ipcb = 0; ipcb < constants::HCAL_NPCBS; ++ipcb) {
     const int asicIndex = static_cast<int>(ipcb); // <-- PCB=(ipcb+1)
 
     const auto& cont = data.getDataForASIC(asicIndex);
@@ -490,7 +537,7 @@ RawDecoderSpec::createHcalPCBEvent(const o2::focal::HCALData& data) const
 
       result[ipcb].setTrigger(window, triggers[window].mHeader0, triggers[window].mHeader1, triggertimes);
     }
-  }
+  }*/
 
   return result;
 }
