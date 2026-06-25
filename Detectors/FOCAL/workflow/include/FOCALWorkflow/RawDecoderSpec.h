@@ -80,17 +80,12 @@ class RawDecoderSpec : public framework::Task
   int decodePadData(const gsl::span<const char> padWords, o2::InteractionRecord& hbIR);
   void decodePadEvent(const gsl::span<const char> padWords, o2::InteractionRecord& hbIR);
 
-  int decodeHcalData(const gsl::span<const char> hcalWords, o2::InteractionRecord& hbIR);
-  void decodeHcalEvent(const gsl::span<const char> hcalWords, o2::InteractionRecord& hbIR);
-
+  int decodeHcalData(const gsl::span<const char> payload, o2::InteractionRecord& hbIR);
+  
   int decodePixelData(const gsl::span<const char> pixelWords, o2::InteractionRecord& hbIR, int feeID);
 
   std::array<PadLayerEvent, constants::PADS_NLAYERS>
-    createPadLayerEvent(const o2::focal::PadData& data) const;
-
-  std::array<HCALEvent, constants::HCAL_NASICS> //std::array<HCALEvent, constants::HCAL_NPCBS>
-  
-    createHcalPCBEvent(const o2::focal::HCALData& data) const;
+    createPadLayerEvent(const o2::focal::PadData& data) const;  
 
   void fillChipToLayer(PixelLayerEvent& pixellayer, const PixelChip& chipData, int feeID);
   void fillEventPixeHitContainer(std::vector<PixelHit>& eventHits,

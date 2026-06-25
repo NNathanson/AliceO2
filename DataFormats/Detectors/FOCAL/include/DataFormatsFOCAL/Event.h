@@ -103,42 +103,26 @@ class HCALEvent
     uint8_t mFourbits;
     uint8_t mTrailer;
   };
-  struct Event {
-    
-    uint32_t mADC[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2][constants::HCAL_NUM_CHANNELS_PER_ROC_HALF];
-    uint32_t mTOA[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2][constants::HCAL_NUM_CHANNELS_PER_ROC_HALF];
-    uint32_t mTOT[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2][constants::HCAL_NUM_CHANNELS_PER_ROC_HALF];
-    // uint32_t tc;
-    // uint32_t tp;
-  };
+
+  uint32_t mADC[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2][constants::HCAL_NUM_CHANNELS_PER_ROC_HALF];
+  uint32_t mTOA[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2][constants::HCAL_NUM_CHANNELS_PER_ROC_HALF];
+  uint32_t mTOT[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2][constants::HCAL_NUM_CHANNELS_PER_ROC_HALF];
+
+  // uint32_t mCMN[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2][constants::HCAL_NUM_CHANNELS_PER_ROC_HALF];
+  // uint32_t mCalib[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2][constants::HCAL_NUM_CHANNELS_PER_ROC_HALF];
 
   void setHeader(unsigned int half, uint8_t header, uint8_t bc, uint8_t wadd, uint8_t fourbits, uint8_t trialer);
-  void setChannel(unsigned int channel, uint32_t adc, uint32_t toa, uint32_t tot);
-  void setCMN(unsigned int half, uint32_t adc, uint32_t toa, uint32_t tot);
-  void setCalib(unsigned int half, uint32_t adc, uint32_t toa, uint32_t tot);
-  void setTrigger(unsigned int window, uint32_t header0, uint32_t header1, const gsl::span<uint8_t> triggers);
-
   const Header& getHeader(unsigned int half) const;
-  const Channel& getChannel(unsigned int channel) const;
-  const Channel& getCMN(unsigned int half) const;
-  const Channel& getCalib(unsigned int half) const;
-  const TriggerWindow& getTrigger(unsigned int window) const;
 
-  std::array<uint32_t, constants::HCAL_MODULE_NCHANNELS> getADCs() const;
-  std::array<uint32_t, constants::HCAL_MODULE_NCHANNELS> getTOAs() const;
-  std::array<uint32_t, constants::HCAL_MODULE_NCHANNELS> getTOTs() const;
+  gsl::span<const uint32_t> getADCs(int sample, int link, int roc, int half) const;
+  gsl::span<const uint32_t> getTOAs(int sample, int link, int roc, int half) const;
+  gsl::span<const uint32_t> getTOTs(int sample, int link, int roc, int half) const;
 
   void reset();
 
  private:
   void check_halfs(unsigned int half) const;
-  void check_channel(unsigned int channel) const;
-
   std::array<Header, 2> mHeaders;
-  std::array<Channel, constants::HCAL_NUM_CHANNELS_PER_ROC_HALF> mChannels;
-  std::array<Channel, 2> mCMN;
-  std::array<Channel, 2> mCalib;
-  std::array<TriggerWindow, constants::HCAL_WINDOW_LENGTH> mTriggers;
 
   ClassDefNV(HCALEvent, 2);
 };
@@ -154,9 +138,9 @@ class Event
   const PadLayerEvent& getPadLayer(unsigned int index) const;
   void setPadLayer(unsigned int layer, const PadLayerEvent& event);
 
-  HCALEvent* getHCALPCB(unsigned int index);
-  const HCALEvent& getHCALPCB(unsigned int index) const;
-  void setHCALPCB(unsigned int index, const HCALEvent& event);
+  HCALEvent& getHCAL();
+  const HCALEvent& getHCAL() const;
+  void setHCAL(const HCALEvent& event);
 
   PixelLayerEvent& getPixelLayer(unsigned int index);
   const PixelLayerEvent& getPixelLayer(unsigned int index) const;
@@ -173,12 +157,11 @@ class Event
 
  private:
   void check_pad_layers(unsigned int index) const;
-  void check_hcal_layers(unsigned int index) const;
   void check_pixel_layers(unsigned int index) const;
 
   InteractionRecord mInteractionRecord;
   std::array<PadLayerEvent, constants::PADS_NLAYERS> mPadLayers;
-  std::array<HCALEvent, constants::HCAL_NPCBS> mHCALPCBs;
+  HCALEvent mHCALData;
   std::array<PixelLayerEvent, constants::PIXELS_NLAYERS> mPixelLayers;
   bool mInitialized = false;
 

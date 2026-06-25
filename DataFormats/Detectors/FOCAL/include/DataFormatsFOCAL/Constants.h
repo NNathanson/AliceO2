@@ -26,7 +26,7 @@ namespace o2::focal::constants
     constexpr int HCAL_NUM_ROCS_PER_LINK = 2;
     constexpr int HCAL_NUM_SAMPLES_PER_EVENT = 16;
 
-    //old constants for hcal
+    //old constants for hcal: saved for reference but should not be used
     constexpr int HCAL_MODULE_NCHANNELS = 64; 
     constexpr int HCAL_MODULE_NHALVES = 2; 
     constexpr int HCAL_NPCBS = 6; //was 4 
