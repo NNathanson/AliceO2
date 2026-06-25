@@ -130,7 +130,7 @@ void RawDecoderSpec::run(framework::ProcessingContext& ctx)
           if (fee == FEE_PADS) {
             wordSize = sizeof(o2::focal::PadGBTWord);
           } else if (fee == FEE_HCAL) {
-            wordSize = sizeof(o2::focal::HCALGBTWord);
+            wordSize = sizeof(o2::focal::HCalDataWord);
           } else {
             wordSize = sizeof(o2::itsmft::GBTWord);
           }
@@ -363,7 +363,7 @@ void RawDecoderSpec::endOfStream(o2::framework::EndOfStreamContext& ec)
 void RawDecoderSpec::sendOutput(framework::ProcessingContext& ctx)
 {
   ctx.outputs().snapshot(framework::Output{o2::header::gDataOriginFOC, "PADLAYERS", mOutputSubspec}, mOutputPadLayers);
-  ctx.outputs().snapshot(framework::Output{o2::header::gDataOriginFOC, "HCALPCBS",  mOutputSubspec}, mOutputHcalPCBs); // <-- ADD
+  ctx.outputs().snapshot(framework::Output{o2::header::gDataOriginFOC, "HCALDATA",  mOutputSubspec}, mOutputHcal); // <-- ADD
   ctx.outputs().snapshot(framework::Output{o2::header::gDataOriginFOC, "PIXELHITS", mOutputSubspec}, mOutputPixelHits);
   ctx.outputs().snapshot(framework::Output{o2::header::gDataOriginFOC, "PIXELCHIPS", mOutputSubspec}, mOutputPixelChips);
   ctx.outputs().snapshot(framework::Output{o2::header::gDataOriginFOC, "TRIGGERS",  mOutputSubspec}, mOutputTriggerRecords);
@@ -373,7 +373,7 @@ void RawDecoderSpec::resetContainers()
 {
   mHBFs.clear();
   mOutputPadLayers.clear();
-  mOutputHcalPCBs.clear();                         // <-- ADD
+  mOutputHcal.clear();                         // <-- ADD
   mOutputPixelChips.clear();
   mOutputPixelHits.clear();
   mOutputTriggerRecords.clear();
@@ -411,136 +411,77 @@ void RawDecoderSpec::decodePadEvent(const gsl::span<const char> padWords, o2::In
 // HCAL decode + conversion
 // ========================
 
-int RawDecoderSpec::decodeHcalData(const gsl::span<const char> hcalWords, o2::InteractionRecord& hbIR)
+int RawDecoderSpec::decodeHcalData(const gsl::span<const char> hcalpayload, o2::InteractionRecord& hbIR)
 {
   LOG(debug) << "Decoding hcal data for Orbit " << hbIR.orbit << ", BC " << hbIR.bc;
 
   constexpr std::size_t EVENTSIZEHCALGBT = 1180;
-  constexpr std::size_t EVENTSIZECHAR = EVENTSIZEHCALGBT * sizeof(HCALGBTWord) / sizeof(char);
+  constexpr std::size_t EVENTSIZECHAR = EVENTSIZEHCALGBT * sizeof(HCalDataWord) / sizeof(char);
 
-  auto nevents = hcalWords.size() / EVENTSIZECHAR;
+  auto nevents = hcalpayload.size() / EVENTSIZECHAR;
   for (int ievent = 0; ievent < nevents; ++ievent) {
-    decodeHcalEvent(hcalWords.subspan(EVENTSIZECHAR * ievent, EVENTSIZECHAR), hbIR);
+    decodeHcalEvent(hcalpayload.subspan(EVENTSIZECHAR * ievent, EVENTSIZECHAR), hbIR);
   }
+
   return nevents;
 }
 
-void RawDecoderSpec::decodeHcalEvent(const gsl::span<const char> hcalWords, o2::InteractionRecord& hbIR)
+void RawDecoderSpec::decodeHcalEvent(const gsl::span<const char> hcalpayload, o2::InteractionRecord& hbIR)
 {
-  // gsl::span<const HCALGBTWord> hcalWordsGBT(reinterpret_cast<const HCALGBTWord*>(hcalWords.data()),
-  //                                          hcalWords.size() / sizeof(HCALGBTWord));
+  gsl::span<const HCalDataWord> hcalWordsGBT(reinterpret_cast<const HCalDataWord*>(hcalpayload.data()),
+                                           hcalpayload.size() / sizeof(HCalDataWord));
 
-  // mHcalDecoder.reset();
-  // mHcalDecoder.decodeEvent(hcalWordsGBT);
+  mHcalDecoder.reset();
+  mHcalDecoder.decodeBuffer(hcalpayload);   
+  if (!mHcalDecoder.hasEventData()) { return; }
 
-  // auto foundHBF = mHBFs.find(hbIR);
-  // if (foundHBF == mHBFs.end()) {
-  //   auto res = mHBFs.insert({hbIR, HBFData{}});
-  //   foundHBF = res.first;
-  // }
-
-  // // IMPORTANT: HCALDecoder exposes getData() (HCALData), convert it to HCALPCBEvent array
-  // foundHBF->second.mHCALEvents.push_back(createHcalPCBEvent(mHcalDecoder.getData()));
-}
-
-std::array<HCALEvent, constants::HCAL_NASICS>
-RawDecoderSpec::createHcalPCBEvent(const o2::focal::HCALData& data) const
-{
-  std::array<HCALEvent, constants::HCAL_NASICS> result{}; //used to be constants::HCAL_NPCBS
-  std::array<uint8_t, 8> triggertimes{};
-
-  //Chip test 1 (new method testing)
-  for (std::size_t asicIndex = 0; asicIndex < constants::HCAL_NASICS; ++asicIndex){
-    const auto& cont = data.getDataForASIC(asicIndex);
-    const auto& asic = cont.getASIC();
-
-    for(std::size_t ihalf = 0; ihalf < o2::focal::HCALASICData::NHALVES; ++ihalf){
-      const int ipcb = asicIndex%o2::focal::HCALASICData::NHALVES + ihalf; //do better mapping at some point, maybe with config file?
-
-      //If statement to catch edge case where not all asic halves are used so an uneven number of pcbs are included in the run (e.g. 3 asics and 5 pcbs)
-      if(ipcb+1 > constants::HCAL_NPCBS){break;}
-      
-      const auto header = asic.getHeader(ihalf);
-      const auto calib  = asic.getCalib(ihalf);
-      const auto cmn    = asic.getCMN(ihalf);
-
-      result[asicIndex].setHeader(ihalf, header.getHeader(), header.getBCID(),
-                             header.getWadd(), header.getFourbit(), header.getTrailer());
-      result[asicIndex].setCalib(ihalf, calib.getADC(), calib.getTOA(), calib.getTOT());
-      result[asicIndex].setCMN(ihalf, cmn.getADC(), cmn.getTOA(), cmn.getTOT());
-      
-    }
-
-    for (int ich = 0; ich < o2::focal::HCALASICData::NCHANNELS; ++ich) {
-      const auto ch = asic.getChannel(ich);
-      result[asicIndex].setChannel(ich, ch.getADC(), ch.getTOA(), ch.getTOT());
-    }
-
-    const auto triggers = cont.getTriggerWords();
-    const auto nwin = std::min<std::size_t>(triggers.size(), constants::HCAL_WINDOW_LENGTH);
-
-    for (std::size_t window = 0; window < nwin; ++window) {
-      triggertimes.fill(0);
-      triggertimes[0] = triggers[window].mTrigger0;
-      triggertimes[1] = triggers[window].mTrigger1;
-      triggertimes[2] = triggers[window].mTrigger2;
-      triggertimes[3] = triggers[window].mTrigger3;
-      triggertimes[4] = triggers[window].mTrigger4;
-      triggertimes[5] = triggers[window].mTrigger5;
-      triggertimes[6] = triggers[window].mTrigger6;
-      triggertimes[7] = triggers[window].mTrigger7;
-
-      result[asicIndex].setTrigger(window, triggers[window].mHeader0, triggers[window].mHeader1, triggertimes);
-    }
+  auto foundHBF = mHBFs.find(hbIR);
+  if (foundHBF == mHBFs.end()) {
+    auto res = mHBFs.insert({hbIR, HBFData{}});
+    foundHBF = res.first;
   }
+
+  std::array<int, 2> numSamples = mDecoder.getNumSamplesRead();
+  LOGF(debug, "Samples read: %02d %02d", numSamples[0], numSamples[1]);
+
+  HCALEvent event;
+  event.orbit = hbIR.orbit;
+  event.bc = hbIR.bc;
+  std::array<std::array<o2::focal::HCalGBTLink, o2::focal::constants::HCAL_NUM_GBT_LINKS>, o2::focal::constants::HCAL_NUM_SAMPLES_PER_EVENT> links = mDecoder.getData();
+
+  int currentChannel = 0;
   
-  // NOTE:
-  // This assumes PCB 1..4 correspond to ASIC indices 0..3 in HCALData.
-  // If a different mapping is needed  one couldchange `asicIndex` accordingly.
+  for (int sample = 0; sample < o2::focal::constants::HCAL_NUM_SAMPLES_PER_EVENT; ++sample) {
+    int globalADCsum = 0;
+    
+    for (int link_id = 0; link_id < 2; ++link_id) {
+      o2::focal::HCalGBTLink currentLink = links[sample][link_id];
+        
+      for (int roc_id = 0; roc_id < 2; ++roc_id) {
+          o2::focal::HCalROC currentROC = currentLink.getROC(roc_id);
+          
+          for (int half = 0; half < 2; ++half) {
+            o2::focal::HCalROCDataLink currentHalf = currentROC.getChipHalf(half);
+            event.calib[sample][link_id][roc_id][half] = currentHalf.getCalibration();
+            event.cmn  [sample][link_id][roc_id][half] = currentHalf.getCommonMode();
+            
+            for (int chn = 0; chn < 36; ++chn) {
+              o2::focal::HCalChannel currentChannel = currentHalf.getChannel(chn);
+              event.adc[sample][link_id][roc_id][half][chn] = currentChannel.adc();
+              event.toa[sample][link_id][roc_id][half][chn] = currentChannel.toa();
+              event.tot[sample][link_id][roc_id][half][chn] = currentChannel.tot();
+            }
+          }
+        }
+    }
+  }  
+
+  foundHBF->second.mHCALEvents.push_back(event);
+
+  return;
   
-  //Original (old method)
-  /*for (std::size_t ipcb = 0; ipcb < constants::HCAL_NPCBS; ++ipcb) {
-    const int asicIndex = static_cast<int>(ipcb); // <-- PCB=(ipcb+1)
-
-    const auto& cont = data.getDataForASIC(asicIndex);
-    const auto& asic = cont.getASIC();
-
-    for (int ihalf = 0; ihalf < o2::focal::HCALASICData::NHALVES; ++ihalf) {
-      const auto header = asic.getHeader(ihalf);
-      const auto calib  = asic.getCalib(ihalf);
-      const auto cmn    = asic.getCMN(ihalf);
-
-      result[ipcb].setHeader(ihalf, header.getHeader(), header.getBCID(),
-                             header.getWadd(), header.getFourbit(), header.getTrailer());
-      result[ipcb].setCalib(ihalf, calib.getADC(), calib.getTOA(), calib.getTOT());
-      result[ipcb].setCMN(ihalf, cmn.getADC(), cmn.getTOA(), cmn.getTOT());
-    }
-
-    for (int ich = 0; ich < o2::focal::HCALASICData::NCHANNELS; ++ich) {
-      const auto ch = asic.getChannel(ich);
-      result[ipcb].setChannel(ich, ch.getADC(), ch.getTOA(), ch.getTOT());
-    }
-
-    const auto triggers = cont.getTriggerWords();
-    const auto nwin = std::min<std::size_t>(triggers.size(), constants::HCAL_WINDOW_LENGTH);
-
-    for (std::size_t window = 0; window < nwin; ++window) {
-      triggertimes.fill(0);
-      triggertimes[0] = triggers[window].mTrigger0;
-      triggertimes[1] = triggers[window].mTrigger1;
-      triggertimes[2] = triggers[window].mTrigger2;
-      triggertimes[3] = triggers[window].mTrigger3;
-      triggertimes[4] = triggers[window].mTrigger4;
-      triggertimes[5] = triggers[window].mTrigger5;
-      triggertimes[6] = triggers[window].mTrigger6;
-      triggertimes[7] = triggers[window].mTrigger7;
-
-      result[ipcb].setTrigger(window, triggers[window].mHeader0, triggers[window].mHeader1, triggertimes);
-    }
-  }*/
-
-  return result;
 }
+
 
 // ========================
 // Pixel decode unchanged
@@ -694,7 +635,7 @@ void RawDecoderSpec::buildEvents()
 
       for (std::size_t itrg = 0; itrg < n; ++itrg) {
         auto startPads  = mOutputPadLayers.size();
-        auto startHCAL  = mOutputHcalPCBs.size();
+        auto startHCAL  = mOutputHcal.size();
         auto startHits  = mOutputPixelHits.size();
         auto startChips = mOutputPixelChips.size();
 
@@ -703,10 +644,7 @@ void RawDecoderSpec::buildEvents()
           mOutputPadLayers.push_back(hbf.mPadEvents[itrg][ilayer]);
         }
 
-        // HCAL: 4 pcbs (index 0..3 => pcb 1..4 by convention)
-        for (std::size_t ipcb = 0; ipcb < constants::HCAL_NPCBS; ++ipcb) {
-          mOutputHcalPCBs.push_back(hbf.mHCALEvents[itrg][ipcb]);
-        }
+        mOutputHcal.push_back(hbf.mHCALEvents[itrg]);
 
         std::vector<PixelHit> eventHits;
         std::vector<PixelChipRecord> eventPixels;
@@ -722,7 +660,7 @@ void RawDecoderSpec::buildEvents()
         // (BC, firstPad, nPad, firstHcal, nHcal, firstChip, nChip, firstHit, nHit)
         mOutputTriggerRecords.emplace_back(hbf.mPixelTriggers[itrg],
                                            startPads,  constants::PADS_NLAYERS,
-                                           startHCAL,  constants::HCAL_NPCBS,
+                                           startHCAL,  constants::HCAL_NPCBS, //!!! come back to this and figure it out
                                            startChips, static_cast<int>(eventPixels.size()),
                                            startHits,  static_cast<int>(eventHits.size()));
       }
@@ -739,7 +677,7 @@ void RawDecoderSpec::buildEvents()
 
       for (std::size_t itrg = 0; itrg < hbf.mPixelTriggers.size(); ++itrg) {
         auto startPads  = mOutputPadLayers.size();
-        auto startHCAL  = mOutputHcalPCBs.size();
+        auto startHCAL  = mOutputHcal.size();
         auto startHits  = mOutputPixelHits.size();
         auto startChips = mOutputPixelChips.size();
 
@@ -766,7 +704,7 @@ void RawDecoderSpec::buildEvents()
     if (mTimeframeHasPadData) {
       for (std::size_t itrg = 0; itrg < hbf.mPadEvents.size(); ++itrg) {
         auto startPads  = mOutputPadLayers.size();
-        auto startHCAL  = mOutputHcalPCBs.size();
+        auto startHCAL  = mOutputHcal.size();
         auto startHits  = mOutputPixelHits.size();
         auto startChips = mOutputPixelChips.size();
 
@@ -787,12 +725,12 @@ void RawDecoderSpec::buildEvents()
     if (mTimeframeHasHcalData) {
       for (std::size_t itrg = 0; itrg < hbf.mHCALEvents.size(); ++itrg) {
         auto startPads  = mOutputPadLayers.size();
-        auto startHCAL  = mOutputHcalPCBs.size();
+        auto startHCAL  = mOutputHcal.size();
         auto startHits  = mOutputPixelHits.size();
         auto startChips = mOutputPixelChips.size();
 
         for (std::size_t ipcb = 0; ipcb < constants::HCAL_NPCBS; ++ipcb) {
-          mOutputHcalPCBs.push_back(hbf.mHCALEvents[itrg][ipcb]);
+          mOutputHcal.push_back(hbf.mHCALEvents[itrg][ipcb]);
         }
 
         mOutputTriggerRecords.emplace_back(hbir,
@@ -966,7 +904,7 @@ o2::framework::DataProcessorSpec o2::focal::reco_workflow::getRawDecoderSpec(boo
   std::vector<o2::framework::OutputSpec> outputs;
 
   outputs.emplace_back(originFOC, "PADLAYERS", outputSubspec, o2::framework::Lifetime::Timeframe);
-  outputs.emplace_back(originFOC, "HCALPCBS",  outputSubspec, o2::framework::Lifetime::Timeframe); // <-- ADD
+  outputs.emplace_back(originFOC, "HCALDATA",  outputSubspec, o2::framework::Lifetime::Timeframe); // <-- ADD
   outputs.emplace_back(originFOC, "PIXELHITS", outputSubspec, o2::framework::Lifetime::Timeframe);
   outputs.emplace_back(originFOC, "PIXELCHIPS", outputSubspec, o2::framework::Lifetime::Timeframe);
   outputs.emplace_back(originFOC, "TRIGGERS",  outputSubspec, o2::framework::Lifetime::Timeframe);

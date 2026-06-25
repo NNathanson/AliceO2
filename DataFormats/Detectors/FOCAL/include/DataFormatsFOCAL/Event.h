@@ -93,7 +93,9 @@ class PixelLayerEvent
 
 class HCALEvent
 {
+
  public:
+
   struct Header {
     uint8_t mHeader;
     uint8_t mBC;
@@ -101,23 +103,19 @@ class HCALEvent
     uint8_t mFourbits;
     uint8_t mTrailer;
   };
-  struct Channel {
-    uint16_t mADC;
-    uint16_t mTOA;
-    uint16_t mTOT;
-    uint16_t tc;
-    uint16_t tp;
-  };
-  struct TriggerWindow {
-    uint32_t mHeader0;
-    uint32_t mHeader1;
-    std::array<uint8_t, 8> mTriggers;
+  struct Event {
+    
+    uint32_t mADC[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2][constants::HCAL_NUM_CHANNELS_PER_ROC_HALF];
+    uint32_t mTOA[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2][constants::HCAL_NUM_CHANNELS_PER_ROC_HALF];
+    uint32_t mTOT[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2][constants::HCAL_NUM_CHANNELS_PER_ROC_HALF];
+    // uint32_t tc;
+    // uint32_t tp;
   };
 
   void setHeader(unsigned int half, uint8_t header, uint8_t bc, uint8_t wadd, uint8_t fourbits, uint8_t trialer);
-  void setChannel(unsigned int channel, uint16_t adc, uint16_t toa, uint16_t tot);
-  void setCMN(unsigned int half, uint16_t adc, uint16_t toa, uint16_t tot);
-  void setCalib(unsigned int half, uint16_t adc, uint16_t toa, uint16_t tot);
+  void setChannel(unsigned int channel, uint32_t adc, uint32_t toa, uint32_t tot);
+  void setCMN(unsigned int half, uint32_t adc, uint32_t toa, uint32_t tot);
+  void setCalib(unsigned int half, uint32_t adc, uint32_t toa, uint32_t tot);
   void setTrigger(unsigned int window, uint32_t header0, uint32_t header1, const gsl::span<uint8_t> triggers);
 
   const Header& getHeader(unsigned int half) const;
@@ -126,9 +124,9 @@ class HCALEvent
   const Channel& getCalib(unsigned int half) const;
   const TriggerWindow& getTrigger(unsigned int window) const;
 
-  std::array<uint16_t, constants::HCAL_MODULE_NCHANNELS> getADCs() const;
-  std::array<uint16_t, constants::HCAL_MODULE_NCHANNELS> getTOAs() const;
-  std::array<uint16_t, constants::HCAL_MODULE_NCHANNELS> getTOTs() const;
+  std::array<uint32_t, constants::HCAL_MODULE_NCHANNELS> getADCs() const;
+  std::array<uint32_t, constants::HCAL_MODULE_NCHANNELS> getTOAs() const;
+  std::array<uint32_t, constants::HCAL_MODULE_NCHANNELS> getTOTs() const;
 
   void reset();
 
@@ -136,12 +134,13 @@ class HCALEvent
   void check_halfs(unsigned int half) const;
   void check_channel(unsigned int channel) const;
 
-  std::array<Header, constants::HCAL_MODULE_NHALVES> mHeaders;
-  std::array<Channel, constants::HCAL_MODULE_NCHANNELS> mChannels;
-  std::array<Channel, constants::HCAL_MODULE_NHALVES> mCMN;
-  std::array<Channel, constants::HCAL_MODULE_NHALVES> mCalib;
+  std::array<Header, 2> mHeaders;
+  std::array<Channel, constants::HCAL_NUM_CHANNELS_PER_ROC_HALF> mChannels;
+  std::array<Channel, 2> mCMN;
+  std::array<Channel, 2> mCalib;
   std::array<TriggerWindow, constants::HCAL_WINDOW_LENGTH> mTriggers;
-  ClassDefNV(HCALEvent, 1);
+
+  ClassDefNV(HCALEvent, 2);
 };
 
 

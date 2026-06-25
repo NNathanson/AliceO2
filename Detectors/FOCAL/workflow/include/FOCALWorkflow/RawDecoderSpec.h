@@ -51,7 +51,8 @@ class RawDecoderSpec : public framework::Task
  public:
   struct HBFData {
     std::vector<std::array<PadLayerEvent, constants::PADS_NLAYERS>> mPadEvents;
-    std::vector<std::array<HCALEvent, constants::HCAL_NASICS>> mHCALEvents; ////used to be constants::HCAL_NPCBS
+    //std::vector<std::array<HCALEvent, constants::HCAL_NASICS>> mHCALEvents; ////used to be constants::HCAL_NPCBS
+    std::vector<HCALEvent> mHCALEvents; //maybe 
     std::vector<std::array<PixelLayerEvent, constants::PIXELS_NLAYERS>> mPixelEvent;
     std::vector<o2::InteractionRecord> mPixelTriggers;
     std::vector<std::vector<int>> mFEEs;
@@ -88,6 +89,7 @@ class RawDecoderSpec : public framework::Task
     createPadLayerEvent(const o2::focal::PadData& data) const;
 
   std::array<HCALEvent, constants::HCAL_NASICS> //std::array<HCALEvent, constants::HCAL_NPCBS>
+  
     createHcalPCBEvent(const o2::focal::HCALData& data) const;
 
   void fillChipToLayer(PixelLayerEvent& pixellayer, const PixelChip& chipData, int feeID);
@@ -129,7 +131,7 @@ class RawDecoderSpec : public framework::Task
   std::vector<PixelHit> mOutputPixelHits;
   std::vector<PixelChipRecord> mOutputPixelChips;
   std::vector<PadLayerEvent> mOutputPadLayers;
-  std::vector<HCALEvent> mOutputHcalPCBs;
+  std::vector<HCALEvent> mOutputHcal;
 
   int mNumTimeframes = 0;
   int mNumHBFPads = 0;
