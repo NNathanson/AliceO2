@@ -416,27 +416,36 @@ int RawDecoderSpec::decodeHcalData(const gsl::span<const char> hcalpayload, o2::
   LOG(debug) << "Decoding hcal data for Orbit " << hbIR.orbit << ", BC " << hbIR.bc;
 
   mHcalDecoder.reset();
-  mHcalDecoder.decodeBuffer(hcalpayload);   
+  mHcalDecoder.decodeBuffer(hcalpayload);
+  
   if (!mHcalDecoder.hasEventData()) {return 0;}
+
+  const int nEvents = mHcalDecoder.getNumEvents();
+  LOGF(debug, "Number of HCAL events: %d", nEvents);
 
   std::array<int, 2> numSamples = mHcalDecoder.getNumSamplesRead();
   LOGF(debug, "Samples read: %02d %02d", numSamples[0], numSamples[1]);
 
-  auto foundHBF = mHBFs.find(hbIR);
-  if (foundHBF == mHBFs.end()) {
-    auto res = mHBFs.insert({hbIR, HBFData{}});
-    foundHBF = res.first;
+  auto& hbfData = mHBFs.try_emplace(hbIR).first->second;
+
+  for (int ievt = 0; ievt < nEvents; ++ievt) {
+    auto event = decodeHcalEvent(mHcalDecoder.getEventData(ievt));
+    event.mOrbit = hbIR.orbit;
+    event.mBC = hbIR.bc;
+    hbfData.mHCALEvents.push_back(event);
   }
 
-  HCALEvent event;
-  std::array<std::array<o2::focal::HCalGBTLink, o2::focal::constants::HCAL_NUM_GBT_LINKS>, o2::focal::constants::HCAL_NUM_SAMPLES_PER_EVENT> links = mHcalDecoder.getData();
 
-  int currentChannel = 0;
-  
-  for (int sample = 0; sample < o2::focal::constants::HCAL_NUM_SAMPLES_PER_EVENT; ++sample) {
-    int globalADCsum = 0;
-    
-    for (int link_id = 0; link_id < 2; ++link_id) {
+  return nEvents;
+
+}
+
+HCALEvent RawDecoderSpec::decodeHcalEvent(const std::array<std::array<HCalGBTLink, constants::HCAL_NUM_GBT_LINKS>, constants::HCAL_NUM_SAMPLES_PER_EVENT>& links)
+{  
+  HCALEvent event;
+
+  for (int sample = 0; sample < constants::HCAL_NUM_SAMPLES_PER_EVENT; ++sample) {
+    for (int link_id = 0; link_id < constants::HCAL_NUM_GBT_LINKS; ++link_id) {
       o2::focal::HCalGBTLink currentLink = links[sample][link_id];
         
       for (int roc_id = 0; roc_id < 2; ++roc_id) {
@@ -444,9 +453,17 @@ int RawDecoderSpec::decodeHcalData(const gsl::span<const char> hcalpayload, o2::
         
         for (int half = 0; half < 2; ++half) {
           o2::focal::HCalROCDataLink currentHalf = currentROC.getChipHalf(half);
-          // event.mCalib[sample][link_id][roc_id][half] = currentHalf.getCalibration();
-          // event.mCMN  [sample][link_id][roc_id][half] = currentHalf.getCommonMode();
+
+          event.mHeader[sample][link_id][roc_id][half] = currentHalf.getHeader().data;
           
+          event.mCMN_ADC   [sample][link_id][roc_id][half] = currentHalf.getCommonMode().adc();
+          event.mCMN_TOA   [sample][link_id][roc_id][half] = currentHalf.getCommonMode().toa();
+          event.mCMN_TOT   [sample][link_id][roc_id][half] = currentHalf.getCommonMode().tot();
+          
+          event.mCalib_ADC [sample][link_id][roc_id][half] = currentHalf.getCalibration().adc();
+          event.mCalib_TOA [sample][link_id][roc_id][half] = currentHalf.getCalibration().toa();
+          event.mCalib_TOT [sample][link_id][roc_id][half] = currentHalf.getCalibration().tot();
+
           for (int chn = 0; chn < 36; ++chn) {
             o2::focal::HCalChannel currentChannel = currentHalf.getChannel(chn);
             event.mADC[sample][link_id][roc_id][half][chn] = currentChannel.adc();
@@ -458,10 +475,7 @@ int RawDecoderSpec::decodeHcalData(const gsl::span<const char> hcalpayload, o2::
     }
   } 
   
-
-  foundHBF->second.mHCALEvents.push_back(event);
-  return 1;
-
+  return event;
 }
 
 
@@ -642,7 +656,7 @@ void RawDecoderSpec::buildEvents()
         // (BC, firstPad, nPad, firstHcal, nHcal, firstChip, nChip, firstHit, nHit)
         mOutputTriggerRecords.emplace_back(hbf.mPixelTriggers[itrg],
                                            startPads,  constants::PADS_NLAYERS,
-                                           startHCAL,  constants::HCAL_NPCBS, //!!! come back to this and figure it out
+                                           startHCAL,  1,
                                            startChips, static_cast<int>(eventPixels.size()),
                                            startHits,  static_cast<int>(eventHits.size()));
       }
@@ -711,13 +725,11 @@ void RawDecoderSpec::buildEvents()
         auto startHits  = mOutputPixelHits.size();
         auto startChips = mOutputPixelChips.size();
 
-        for (std::size_t ipcb = 0; ipcb < constants::HCAL_NPCBS; ++ipcb) {
-          mOutputHcal.push_back(hbf.mHCALEvents[itrg]);
-        }
+        mOutputHcal.push_back(hbf.mHCALEvents[itrg]);
 
         mOutputTriggerRecords.emplace_back(hbir,
                                            startPads, 0,
-                                           startHCAL, constants::HCAL_NPCBS,
+                                           startHCAL, 1,
                                            startChips, 0,
                                            startHits, 0);
       }

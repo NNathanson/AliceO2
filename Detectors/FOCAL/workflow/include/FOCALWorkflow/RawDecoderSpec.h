@@ -81,7 +81,8 @@ class RawDecoderSpec : public framework::Task
   void decodePadEvent(const gsl::span<const char> padWords, o2::InteractionRecord& hbIR);
 
   int decodeHcalData(const gsl::span<const char> payload, o2::InteractionRecord& hbIR);
-  
+  HCALEvent decodeHcalEvent(const std::array<std::array<HCalGBTLink, constants::HCAL_NUM_GBT_LINKS>, constants::HCAL_NUM_SAMPLES_PER_EVENT>& frame);
+
   int decodePixelData(const gsl::span<const char> pixelWords, o2::InteractionRecord& hbIR, int feeID);
 
   std::array<PadLayerEvent, constants::PADS_NLAYERS>

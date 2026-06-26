@@ -47,17 +47,27 @@ class HCALDecoder
   
   std::array<int, constants::HCAL_NUM_GBT_LINKS> getNumSamplesRead() { return mLinkSampleCounters; }
   std::array<std::array<HCalGBTLink, constants::HCAL_NUM_GBT_LINKS>, constants::HCAL_NUM_SAMPLES_PER_EVENT> getData() { return mLinks; }
- // std::array<HCalGBTLink, 2> getDataNew() { return mLinks; }
+  std::array<std::array<HCalGBTLink, constants::HCAL_NUM_GBT_LINKS>, constants::HCAL_NUM_SAMPLES_PER_EVENT> getEventData(int eventIndex) { return mEvents.at(eventIndex); }
+  int getNumEvents() const { return static_cast<int>(mEvents.size()); }
 
  private:
   int mWin_dur = 20; // unused?
   //HCALData mData; // replace
   bool mHasData;
 
-  std::array<std::array<HCalGBTLink, constants::HCAL_NUM_GBT_LINKS>, constants::HCAL_NUM_SAMPLES_PER_EVENT> mLinks = {};
+  std::array<std::array<HCalGBTLink, constants::HCAL_NUM_GBT_LINKS>, constants::HCAL_NUM_SAMPLES_PER_EVENT> mLinks = {}; //for full HBF
+  std::array<std::array<HCalGBTLink, constants::HCAL_NUM_GBT_LINKS>, constants::HCAL_NUM_SAMPLES_PER_EVENT> mLinksPerEv = {}; //per triggered event in HBF
+  std::vector<std::array<std::array<HCalGBTLink, constants::HCAL_NUM_GBT_LINKS>, constants::HCAL_NUM_SAMPLES_PER_EVENT>> mEvents = {}; //storage for all events
+
+  //Counters per HBF
   std::array<int, constants::HCAL_NUM_GBT_LINKS> mLinkLineCounters = {};
   std::array<int, constants::HCAL_NUM_GBT_LINKS> mLinkSampleCounters = {};
   std::array<bool, constants::HCAL_NUM_GBT_LINKS> mLinkFrameActive = {};
+
+  //Counters per event
+  std::array<int, constants::HCAL_NUM_GBT_LINKS> mLinkLineCountersEv   = {};
+  std::array<int, constants::HCAL_NUM_GBT_LINKS> mLinkSampleCountersEv = {};
+  std::array<bool, constants::HCAL_NUM_GBT_LINKS> mLinkFrameActiveEv    = {};
 
   ClassDefNV(HCALDecoder, 1);
 };

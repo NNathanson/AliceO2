@@ -96,33 +96,32 @@ class HCALEvent
 
  public:
 
-  struct Header {
-    uint8_t mHeader;
-    uint8_t mBC;
-    uint8_t mWADD;
-    uint8_t mFourbits;
-    uint8_t mTrailer;
-  };
+  int mOrbit = 0;
+  int mBC    = 0;
 
+  // Header
+  uint32_t mHeader[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2];
+
+  // Data channels 
   uint32_t mADC[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2][constants::HCAL_NUM_CHANNELS_PER_ROC_HALF];
   uint32_t mTOA[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2][constants::HCAL_NUM_CHANNELS_PER_ROC_HALF];
   uint32_t mTOT[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2][constants::HCAL_NUM_CHANNELS_PER_ROC_HALF];
 
-  // uint32_t mCMN[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2][constants::HCAL_NUM_CHANNELS_PER_ROC_HALF];
-  // uint32_t mCalib[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2][constants::HCAL_NUM_CHANNELS_PER_ROC_HALF];
+  // Common mode channels
+  uint32_t mCMN_ADC [constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2];
+  uint32_t mCMN_TOA [constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2];
+  uint32_t mCMN_TOT [constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2];
 
-  void setHeader(unsigned int half, uint8_t header, uint8_t bc, uint8_t wadd, uint8_t fourbits, uint8_t trialer);
-  const Header& getHeader(unsigned int half) const;
+  // Calibration channels
+  uint32_t mCalib_ADC[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2];
+  uint32_t mCalib_TOA[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2];
+  uint32_t mCalib_TOT[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2];
 
   gsl::span<const uint32_t> getADCs(int sample, int link, int roc, int half) const;
   gsl::span<const uint32_t> getTOAs(int sample, int link, int roc, int half) const;
   gsl::span<const uint32_t> getTOTs(int sample, int link, int roc, int half) const;
 
   void reset();
-
- private:
-  void check_halfs(unsigned int half) const;
-  std::array<Header, 2> mHeaders;
 
   ClassDefNV(HCALEvent, 2);
 };

@@ -306,23 +306,6 @@ void PixelLayerEvent::reset()
   mChips.clear();
 }
 
-void HCALEvent::setHeader(unsigned int half, uint8_t header, uint8_t bc, uint8_t wadd, uint8_t fourbits, uint8_t trailer)
-{
-  check_halfs(half);
-  auto& asicheader = mHeaders[half];
-  asicheader.mHeader = header;
-  asicheader.mBC = bc;
-  asicheader.mFourbits = fourbits;
-  asicheader.mWADD = wadd;
-  asicheader.mTrailer = trailer;
-}
-
-const HCALEvent::Header& HCALEvent::getHeader(unsigned int half) const
-{
-  check_halfs(half);
-  return mHeaders[half];
-}
-
 gsl::span<const uint32_t> HCALEvent::getADCs(int sample, int link, int roc, int half) const
 {
   return gsl::span<const uint32_t>(mADC[sample][link][roc][half],
@@ -343,24 +326,20 @@ gsl::span<const uint32_t> HCALEvent::getTOTs(int sample, int link, int roc, int 
 
 void HCALEvent::reset()
 {
-  for (auto& header : mHeaders) {
-    header.mBC = 0;
-    header.mHeader = 0;
-    header.mFourbits = 0;
-    header.mWADD = 0;
-    header.mTrailer = 0;
-  }
-  memset(mADC, 0, sizeof(mADC));
-  memset(mTOA, 0, sizeof(mTOA));
-  memset(mTOT, 0, sizeof(mTOT));
-  // memset(mCalib, 0, sizeof(mCalib));
-  // memset(mCMN, 0, sizeof(mCMN));
-  
-}
+  mOrbit = 0;
+  mBC    = 0;
 
-void HCALEvent::check_halfs(unsigned int half) const
-{
-  if (half >= constants::HCAL_MODULE_NHALVES) {
-    throw IndexExceptionEvent(half, constants::HCAL_MODULE_NHALVES, IndexExceptionEvent::IndexType_t::HCAL_NHALVES);
-  }
+  memset(mHeader, 0, sizeof(mHeader));
+
+  memset(mADC,        0, sizeof(mADC));
+  memset(mTOA,        0, sizeof(mTOA));
+  memset(mTOT,        0, sizeof(mTOT));
+
+  memset(mCMN_ADC,    0, sizeof(mCMN_ADC));
+  memset(mCMN_TOA,    0, sizeof(mCMN_TOA));
+  memset(mCMN_TOT,    0, sizeof(mCMN_TOT));
+
+  memset(mCalib_ADC,  0, sizeof(mCalib_ADC));
+  memset(mCalib_TOA,  0, sizeof(mCalib_TOA));
+  memset(mCalib_TOT,  0, sizeof(mCalib_TOT));
 }

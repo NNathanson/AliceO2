@@ -27,11 +27,11 @@ namespace o2::focal::constants
     constexpr int HCAL_NUM_SAMPLES_PER_EVENT = 16;
 
     //old constants for hcal: saved for reference but should not be used
-    constexpr int HCAL_MODULE_NCHANNELS = 64; 
-    constexpr int HCAL_MODULE_NHALVES = 2; 
-    constexpr int HCAL_NPCBS = 6; //was 4 
-    constexpr int HCAL_NASICS = 3; //was 4 
-    constexpr int HCAL_WINDOW_LENGTH = 20;
+    // constexpr int HCAL_MODULE_NCHANNELS = 64; 
+    // constexpr int HCAL_MODULE_NHALVES = 2; 
+    // constexpr int HCAL_NPCBS = 6; //was 4 
+    // constexpr int HCAL_NASICS = 3; //was 4 
+    // constexpr int HCAL_WINDOW_LENGTH = 20;
 
     //Pixels
     constexpr int PIXELS_NLAYERS = 2;
