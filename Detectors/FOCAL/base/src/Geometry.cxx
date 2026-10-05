@@ -743,7 +743,7 @@ std::tuple<double, double, double> Geometry::getGeoTowerCenter(int tower, int se
       case HCALDesgin::Sheets: {
         Composition comp1 = mHCalCompositionBase[0];
         Composition comp2 = mHCalCompositionBase[2];
-        double hCALsizeX = comp1.sizeX() * 2;                                                          // Size of two sheet in X
+        double hCALsizeX = comp1.sizeX() * 2;                                                           // Size of two sheet in X
         double hCALsizeY = getHCALTowersInY() * (comp1.sizeY() + comp2.sizeY()) * getHCALTowerHeight(); // To be set in a better way
 
         x = ix * hCALsizeX / getHCALTowersInX() + 0.5 * hCALsizeX / getHCALTowersInX() - 0.5 * hCALsizeX;
@@ -1162,7 +1162,7 @@ std::tuple<bool, int, int, int, int> Geometry::getVirtualInfo(double x, double y
       case HCALDesgin::Sheets: {
         Composition comp1 = mHCalCompositionBase[0];
         Composition comp2 = mHCalCompositionBase[2];
-        double hCALsizeX = comp1.sizeX() * 2;                                                          // Size of two sheet in X
+        double hCALsizeX = comp1.sizeX() * 2;                                                           // Size of two sheet in X
         double hCALsizeY = getHCALTowersInY() * (comp1.sizeY() + comp2.sizeY()) * getHCALTowerHeight(); // To be set in a better way
 
         if (y < getHCALBeamPipeHoleSize() / 2 && y > -getHCALBeamPipeHoleSize() / 2) {
@@ -1222,7 +1222,7 @@ std::tuple<bool, double, double, double> Geometry::getXYZFromColRowSeg(int col, 
       case HCALDesgin::Sheets: {
         Composition comp1 = mHCalCompositionBase[0];
         Composition comp2 = mHCalCompositionBase[2];
-        double hCALsizeX = comp1.sizeX() * 2;                                                          // Size of two sheet in X
+        double hCALsizeX = comp1.sizeX() * 2;                                                           // Size of two sheet in X
         double hCALsizeY = getHCALTowersInY() * (comp1.sizeY() + comp2.sizeY()) * getHCALTowerHeight(); // To be set in a better way
 
         y = -1 * hCALsizeY / 2 + ((float)row + 0.5) * (hCALsizeY / getHCALTowersInY());

@@ -32,31 +32,31 @@ using DigitBase = o2::dataformats::TimeStamp<double>;
 /// \ingroup FOCALDataFormat
 class HCalDigit : public DigitBase
 {
-    public:
-        HCalDigit() = default;
-        HCalDigit(Int_t tower, Double_t amplitude, Double_t time);
+ public:
+  HCalDigit() = default;
+  HCalDigit(Int_t tower, Double_t amplitude, Double_t time);
 
-        void setTower(Int_t tower) { mTower = tower; }
-        Int_t getTower() const { return mTower; }
+  void setTower(Int_t tower) { mTower = tower; }
+  Int_t getTower() const { return mTower; }
 
-        void setAmplitude(Double_t amplitude) { mAmplitude = amplitude; }
-        Double_t getAmplitude() const; // returns energy of digit with the addition of simulated electronics noise (in EMCAL - still determining if this is how we want to do it here)
+  void setAmplitude(Double_t amplitude) { mAmplitude = amplitude; }
+  Double_t getAmplitude() const; // returns energy of digit with the addition of simulated electronics noise (in EMCAL - still determining if this is how we want to do it here)
 
-        void setEnergy(Double_t energy) { mAmplitude = energy; }
-        Double_t getEnergy() const { return mAmplitude; } // returns base energy of the digit
+  void setEnergy(Double_t energy) { mAmplitude = energy; }
+  Double_t getEnergy() const { return mAmplitude; } // returns base energy of the digit
 
-        bool canAdd(const HCalDigit other) // checks if two digits can be added, i.e. if they belong to the same tower in the same time window
-        {
-            return (mTower == other.getTower() && std::abs(getTimeStamp() - other.getTimeStamp()) < constants::HCAL_TIMEWINDOW);
-        }
-        
-        HCalDigit& operator+=(const HCalDigit& other);
+  bool canAdd(const HCalDigit other) // checks if two digits can be added, i.e. if they belong to the same tower in the same time window
+  {
+    return (mTower == other.getTower() && std::abs(getTimeStamp() - other.getTimeStamp()) < constants::HCAL_TIMEWINDOW);
+  }
 
-    private:
-        Int_t mTower = -1;
-        Double_t mAmplitude = 0;
+  HCalDigit& operator+=(const HCalDigit& other);
 
-        ClassDefNV(HCalDigit, 1);
+ private:
+  Int_t mTower = -1;
+  Double_t mAmplitude = 0;
+
+  ClassDefNV(HCalDigit, 1);
 };
 
 std::ostream& operator<<(std::ostream& stream, const HCalDigit& dig);

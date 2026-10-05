@@ -15,47 +15,47 @@
 using namespace o2::focal;
 
 HCalLabeledDigit::HCalLabeledDigit(HCalDigit digit, MCLabel label)
-    : mDigit(digit)
+  : mDigit(digit)
 {
-    mLabels.push_back(label);
+  mLabels.push_back(label);
 }
 
 HCalLabeledDigit::HCalLabeledDigit(Int_t tower, Double_t amplitude, Double_t time, MCLabel label)
-    : mDigit(tower, amplitude, time)
+  : mDigit(tower, amplitude, time)
 {
-    mLabels.push_back(label);
+  mLabels.push_back(label);
 }
 
 HCalLabeledDigit& HCalLabeledDigit::operator+=(const HCalLabeledDigit& other)
 {
-    if (canAdd(other)) {
-        double a1 = getAmplitude();
-        double a2 = other.getAmplitude();
-        double r = ((a1 + a2) != 0) ? 1.0 / (a1 + a2) : 0.0;
-        mDigit += other.getDigit();
+  if (canAdd(other)) {
+    double a1 = getAmplitude();
+    double a2 = other.getAmplitude();
+    double r = ((a1 + a2) != 0) ? 1.0 / (a1 + a2) : 0.0;
+    mDigit += other.getDigit();
 
-        for (int j = 0; j < mLabels.size(); j++) {
-            mLabels.at(j).setAmplitudeFraction(mLabels.at(j).getAmplitudeFraction() * a1 * r);
-        }
-        
-        for (const auto& label : other.getLabels()) {
-            mLabels.push_back(label);
-        }
+    for (int j = 0; j < mLabels.size(); j++) {
+      mLabels.at(j).setAmplitudeFraction(mLabels.at(j).getAmplitudeFraction() * a1 * r);
     }
 
-    return *this;
+    for (const auto& label : other.getLabels()) {
+      mLabels.push_back(label);
+    }
+  }
+
+  return *this;
 }
 
 void HCalLabeledDigit::PrintStream(std::ostream& stream) const
 {
-    stream << "Tower: " << getTower() << ", Amplitude: " << getAmplitude() << ", TimeStamp: " << getTimeStamp() << ", Labels: ";
-    for (const auto& label : getLabels()) {
-        stream << label << " ";
-    }
+  stream << "Tower: " << getTower() << ", Amplitude: " << getAmplitude() << ", TimeStamp: " << getTimeStamp() << ", Labels: ";
+  for (const auto& label : getLabels()) {
+    stream << label << " ";
+  }
 }
 
 std::ostream& o2::focal::operator<<(std::ostream& stream, HCalLabeledDigit digit)
 {
-    digit.PrintStream(stream);
-    return stream;
+  digit.PrintStream(stream);
+  return stream;
 }

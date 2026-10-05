@@ -95,9 +95,8 @@ class HCALEvent
 {
 
  public:
-
   int mOrbit = 0;
-  int mBC    = 0;
+  int mBC = 0;
 
   // Header
   uint32_t mHeader[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2];
@@ -112,9 +111,9 @@ class HCALEvent
   uint16_t mTOT[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2][constants::HCAL_NUM_CHANNELS_PER_ROC_HALF];
 
   // Common mode channels
-  uint16_t mCMN_ADC [constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2];
-  uint16_t mCMN_TOA [constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2];
-  uint16_t mCMN_TOT [constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2];
+  uint16_t mCMN_ADC[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2];
+  uint16_t mCMN_TOA[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2];
+  uint16_t mCMN_TOT[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2];
 
   // Calibration channels
   uint16_t mCalib_ADC[constants::HCAL_NUM_SAMPLES_PER_EVENT][constants::HCAL_NUM_GBT_LINKS][constants::HCAL_NUM_ROCS_PER_LINK][2];

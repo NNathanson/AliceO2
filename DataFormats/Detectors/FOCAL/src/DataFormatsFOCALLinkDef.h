@@ -35,5 +35,4 @@
 #pragma link C++ class std::vector < o2::focal::PixelChipRecord> + ;
 #pragma link C++ class std::vector < o2::focal::TriggerRecord> + ;
 
-
 #endif

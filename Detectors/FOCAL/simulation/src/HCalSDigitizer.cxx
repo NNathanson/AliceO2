@@ -36,91 +36,93 @@ using namespace o2::focal;
 std::vector<o2::focal::HCalLabeledDigit> HCalSDigitizer::process(const std::vector<Hit>& hits)
 {
 
-    std::map<int, std::map<int, std::vector<o2::focal::Hit>>> hitsPerTowerPerParticleID;
+  std::map<int, std::map<int, std::vector<o2::focal::Hit>>> hitsPerTowerPerParticleID;
 
-    // will be used to sort digits and labels by tower
-    std::unordered_map<Int_t, std::vector<HCalLabeledDigit>> digitsPerTower;
+  // will be used to sort digits and labels by tower
+  std::unordered_map<Int_t, std::vector<HCalLabeledDigit>> digitsPerTower;
 
-    for (auto hit : hits) {
-        if(hit.isHCALHit()) { hitsPerTowerPerParticleID[hit.GetDetectorID()][hit.GetTrackID()].push_back(hit); } 
+  for (auto hit : hits) {
+    if (hit.isHCALHit()) {
+      hitsPerTowerPerParticleID[hit.GetDetectorID()][hit.GetTrackID()].push_back(hit);
+    }
+  }
+
+  std::vector<o2::focal::Hit> SHits;
+  for (auto [towerID, hitsParticle] : hitsPerTowerPerParticleID) {
+    for (auto [partID, Hits] : hitsParticle) {
+      o2::focal::Hit SHit = std::accumulate(std::next(Hits.begin()), Hits.end(), Hits.front());
+      SHits.push_back(SHit);
+    }
+  }
+
+  for (auto hit : SHits) {
+    Int_t tower = hit.GetDetectorID();
+
+    if (tower < 0 || tower > mGeometry->getHCALTowersInX() * mGeometry->getHCALTowersInY()) {
+      auto [indetector, col, row, layer, segment] = mGeometry->getVirtualInfo(hit.GetX(), hit.GetY(), hit.GetZ());
+      int nCol = mGeometry->getHCALTowersInX();
+      int recomputedTower = row * nCol + col;
+      LOG(warning) << "hit " << hit.GetTrackID() << " in event " << mCurrEvID << " tower index out of range: " << tower
+                   << " (indetector=" << indetector << ", segment=" << segment << ", col=" << col << ", row=" << row
+                   << ", nCol=" << nCol << ", recomputed tower=" << recomputedTower << ")";
+      if (!indetector) {
+        // position doesn't map into the detector at all - not a tower-encoding problem
+        LOG(warning) << "  hit position (" << hit.GetX() << ", " << hit.GetY() << ", " << hit.GetZ() << ") falls outside the detector volume";
+      } else if (recomputedTower != tower) {
+        // stored detID disagrees with what the current geometry would assign - encoding mismatch, not a geometry problem
+        LOG(warning) << "  stored tower (" << tower << ") != tower recomputed from position (" << recomputedTower << "): detID/column encoding mismatch between Detector::ProcessHitsHCAL and HCalSDigitizer";
+      }
+      continue;
     }
 
-    std::vector<o2::focal::Hit> SHits;
-    for (auto [towerID, hitsParticle] : hitsPerTowerPerParticleID) {
-        for (auto [partID, Hits] : hitsParticle) {
-            o2::focal::Hit SHit = std::accumulate(std::next(Hits.begin()), Hits.end(), Hits.front());
-            SHits.push_back(SHit);
-        }
+    Double_t energy = hit.GetEnergyLoss();
+
+    HCalDigit digit(tower, energy, hit.GetTime());
+
+    MCLabel label(hit.GetTrackID(), mCurrEvID, mCurrSrcID, false, 1.0);
+    if (digit.getAmplitude() < __DBL_EPSILON__) { // __DBL_EPSILON__ is the smallest possible float for which 1.0 + __DBL_EPSILON__ != 1.0, meaning this is essentially checking for negligible amplitude contributions
+      label.setAmplitudeFraction(0);
+    }
+    HCalLabeledDigit d(digit, label);
+
+    digitsPerTower[tower].push_back(d);
+  }
+  std::vector<o2::focal::HCalLabeledDigit> digits;
+
+  // Sum all digits in one tower
+  for (auto& [tower, labeledDigits] : digitsPerTower) {
+    if (labeledDigits.empty()) {
+      continue;
     }
 
-    for (auto hit : SHits) {
-        Int_t tower = hit.GetDetectorID();
+    o2::focal::HCalLabeledDigit SDigit = std::accumulate(std::next(labeledDigits.begin()), labeledDigits.end(), labeledDigits.front());
 
-        if (tower < 0 || tower > mGeometry->getHCALTowersInX() * mGeometry->getHCALTowersInY()) {
-            auto [indetector, col, row, layer, segment] = mGeometry->getVirtualInfo(hit.GetX(), hit.GetY(), hit.GetZ());
-            int nCol = mGeometry->getHCALTowersInX();
-            int recomputedTower = row * nCol + col;
-            LOG(warning) << "hit " << hit.GetTrackID() << " in event " << mCurrEvID << " tower index out of range: " << tower
-                        << " (indetector=" << indetector << ", segment=" << segment << ", col=" << col << ", row=" << row
-                        << ", nCol=" << nCol << ", recomputed tower=" << recomputedTower << ")";
-            if (!indetector) {
-                // position doesn't map into the detector at all - not a tower-encoding problem
-                LOG(warning) << "  hit position (" << hit.GetX() << ", " << hit.GetY() << ", " << hit.GetZ() << ") falls outside the detector volume";
-            } else if (recomputedTower != tower) {
-                // stored detID disagrees with what the current geometry would assign - encoding mismatch, not a geometry problem
-                LOG(warning) << "  stored tower (" << tower << ") != tower recomputed from position (" << recomputedTower << "): detID/column encoding mismatch between Detector::ProcessHitsHCAL and HCalSDigitizer";
-            }
-            continue;
-        }
-
-        Double_t energy = hit.GetEnergyLoss();
-
-        HCalDigit digit(tower, energy, hit.GetTime());
-
-        MCLabel label(hit.GetTrackID(), mCurrEvID, mCurrSrcID, false, 1.0);
-        if (digit.getAmplitude() < __DBL_EPSILON__) { // __DBL_EPSILON__ is the smallest possible float for which 1.0 + __DBL_EPSILON__ != 1.0, meaning this is essentially checking for negligible amplitude contributions
-            label.setAmplitudeFraction(0);
-        }
-        HCalLabeledDigit d(digit, label);
-
-        digitsPerTower[tower].push_back(d);
+    if (SDigit.getDigit().getAmplitude() < __DBL_EPSILON__) {
+      continue;
     }
-    std::vector<o2::focal::HCalLabeledDigit> digits;
+    digits.push_back(SDigit);
+  }
 
-    // Sum all digits in one tower
-    for (auto& [tower, labeledDigits] : digitsPerTower) {
-        if (labeledDigits.empty()) {
-            continue;
-        }
-        
-        o2::focal::HCalLabeledDigit SDigit = std::accumulate(std::next(labeledDigits.begin()), labeledDigits.end(), labeledDigits.front());
+  digitsPerTower.clear();
 
-        if (SDigit.getDigit().getAmplitude() < __DBL_EPSILON__) {
-            continue;
-        }
-        digits.push_back(SDigit);
-    }
-
-    digitsPerTower.clear();
-
-    return digits;
+  return digits;
 }
 
 // Setting source and event id for the current MC truth labels
 void HCalSDigitizer::setCurrSrcID(int v)
 {
-    // set current MC source ID
-    if (v > MCCompLabel::maxSourceID()) {
-        LOG(fatal) << "MC source id " << v << " exceeds max storable in the label " << MCCompLabel::maxSourceID();
-    }
-    mCurrSrcID = v;
+  // set current MC source ID
+  if (v > MCCompLabel::maxSourceID()) {
+    LOG(fatal) << "MC source id " << v << " exceeds max storable in the label " << MCCompLabel::maxSourceID();
+  }
+  mCurrSrcID = v;
 }
 
 void HCalSDigitizer::setCurrEvID(int v)
 {
-    // set current MC event ID
-    if (v > MCCompLabel::maxEventID()) {
-        LOG(fatal) << "MC event id " << v << " exceeds max storable in the label " << MCCompLabel::maxEventID();
-    }
-    mCurrEvID = v;
+  // set current MC event ID
+  if (v > MCCompLabel::maxEventID()) {
+    LOG(fatal) << "MC event id " << v << " exceeds max storable in the label " << MCCompLabel::maxEventID();
+  }
+  mCurrEvID = v;
 }

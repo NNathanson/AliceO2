@@ -152,20 +152,20 @@ gsl::span<const uint16_t> HCALEvent::getTOTs(int sample, int link, int roc, int 
 void HCALEvent::reset()
 {
   mOrbit = 0;
-  mBC    = 0;
+  mBC = 0;
 
   memset(mHeader, 0, sizeof(mHeader));
 
-  memset(tc,       0, sizeof(tc));
-  memset(tp,       0, sizeof(tp));
+  memset(tc, 0, sizeof(tc));
+  memset(tp, 0, sizeof(tp));
 
-  memset(mADC,       0, sizeof(mADC));
-  memset(mTOA,       0, sizeof(mTOA));
-  memset(mTOT,       0, sizeof(mTOT));
+  memset(mADC, 0, sizeof(mADC));
+  memset(mTOA, 0, sizeof(mTOA));
+  memset(mTOT, 0, sizeof(mTOT));
 
-  memset(mCMN_ADC,   0, sizeof(mCMN_ADC));
-  memset(mCMN_TOA,   0, sizeof(mCMN_TOA));
-  memset(mCMN_TOT,   0, sizeof(mCMN_TOT));
+  memset(mCMN_ADC, 0, sizeof(mCMN_ADC));
+  memset(mCMN_TOA, 0, sizeof(mCMN_TOA));
+  memset(mCMN_TOT, 0, sizeof(mCMN_TOT));
 
   memset(mCalib_ADC, 0, sizeof(mCalib_ADC));
   memset(mCalib_TOA, 0, sizeof(mCalib_TOA));

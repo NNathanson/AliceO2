@@ -38,29 +38,29 @@ namespace focal
 
 class HCalSDigitizer
 {
-    public:
-        HCalSDigitizer() = default;
-        ~HCalSDigitizer() = default;
-        HCalSDigitizer(const HCalSDigitizer&) = delete;
-        HCalSDigitizer& operator=(const HCalSDigitizer&) = delete;
+ public:
+  HCalSDigitizer() = default;
+  ~HCalSDigitizer() = default;
+  HCalSDigitizer(const HCalSDigitizer&) = delete;
+  HCalSDigitizer& operator=(const HCalSDigitizer&) = delete;
 
-        /// Steer conversion of hits to digits
-        std::vector<o2::focal::HCalLabeledDigit> process(const std::vector<Hit>& hits);
+  /// Steer conversion of hits to digits
+  std::vector<o2::focal::HCalLabeledDigit> process(const std::vector<Hit>& hits);
 
-        void setCurrSrcID(int v);
-        int getCurrSrcID() const { return mCurrSrcID; }
+  void setCurrSrcID(int v);
+  int getCurrSrcID() const { return mCurrSrcID; }
 
-        void setCurrEvID(int v);
-        int getCurrEvID() const { return mCurrEvID; }
+  void setCurrEvID(int v);
+  int getCurrEvID() const { return mCurrEvID; }
 
-        void setGeometry(const o2::focal::Geometry* gm) { mGeometry = gm; }
+  void setGeometry(const o2::focal::Geometry* gm) { mGeometry = gm; }
 
-    private:
-        const Geometry* mGeometry = nullptr; // FOCAL geometry
-        int mCurrSrcID = 0;                  // current MC source from the manager
-        int mCurrEvID = 0;                   // current event ID from the manager
+ private:
+  const Geometry* mGeometry = nullptr; // FOCAL geometry
+  int mCurrSrcID = 0;                  // current MC source from the manager
+  int mCurrEvID = 0;                   // current event ID from the manager
 
-        ClassDefNV(HCalSDigitizer, 1);
+  ClassDefNV(HCalSDigitizer, 1);
 };
 } // namespace focal
 } // namespace o2
