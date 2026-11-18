@@ -19,6 +19,7 @@
 #include "DataFormatsFOCAL/SDigit.h"
 #include "FOCALBase/Hit.h"
 #include "FOCALSimulation/SDigitizer.h"
+#include "FOCALSimulation/HCALDigitizer.h"
 #include <DetectorsBase/BaseDPLDigitizer.h>
 
 class TChain;
@@ -62,10 +63,11 @@ class DigitizerSpec final : public o2::base::BaseDPLDigitizer, public o2::framew
   void run(framework::ProcessingContext& ctx) override;
 
  private:
-  bool mFinished = false;              ///< Flag for digitization finished
-  o2::focal::SDigitizer mSumDigitizer; ///< Summed digitizer
-  std::vector<Hit> mHits;              ///< Vector with input hits
-  std::vector<TChain*> mSimChains;     ///< Chains with the simulated hits
+  bool mFinished = false;                  ///< Flag for digitization finished
+  o2::focal::SDigitizer mSumDigitizer;     ///< Summed digitizer
+  std::vector<Hit> mHits;                  ///< Vector with input hits
+  std::vector<TChain*> mSimChains;         ///< Chains with the simulated hits
+  o2::focal::HCALDigitizer mHCALDigitizer; ///< HCAL digitizer
 };
 
 /// \brief Create the DPL processor spec of the FOCAL digitizer

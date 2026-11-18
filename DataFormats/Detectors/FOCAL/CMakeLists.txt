@@ -17,6 +17,7 @@ o2_add_library(DataFormatsFOCAL
     src/PixelChipRecord.cxx
     src/TriggerRecord.cxx
     src/SDigit.cxx
+    src/Digit.cxx
     PUBLIC_LINK_LIBRARIES O2::CommonDataFormat
     O2::Headers
     O2::SimulationDataFormat
@@ -29,4 +30,5 @@ o2_target_root_dictionary(DataFormatsFOCAL
     include/DataFormatsFOCAL/PixelChipRecord.h
     include/DataFormatsFOCAL/TriggerRecord.h
     include/DataFormatsFOCAL/SDigit.h
+    include/DataFormatsFOCAL/Digit.h
     include/DataFormatsFOCAL/MCLabel.h)

@@ -28,6 +28,7 @@
 #include "DataFormatsFOCAL/TriggerRecord.h"
 #include "DataFormatsFOCAL/MCLabel.h"
 #include "SimulationDataFormat/MCTruthContainer.h"
+#include "DataFormatsFOCAL/Digit.h"
 
 #include <map>
 #include <tuple>
@@ -55,6 +56,9 @@ void DigitizerSpec::initDigitizerTask(framework::InitContext& ctx)
 
   mSumDigitizer.setGeometry(geom);
 
+  mHCALDigitizer.setGeometry(geom);
+  mHCALDigitizer.init();
+
   mFinished = false;
 }
 
@@ -79,6 +83,8 @@ void DigitizerSpec::run(framework::ProcessingContext& ctx)
   TStopwatch timer;
   timer.Start();
 
+  mHCALDigitizer.clear();
+
   // Single loop over collisions.
   // v0: every collision is treated as triggered (TODO: trigger selection, e.g. FIT minimum bias, and pile-up).
   for (int collID = 0; collID < timesview.size(); ++collID) {
@@ -86,6 +92,7 @@ void DigitizerSpec::run(framework::ProcessingContext& ctx)
     // Sum the digits of all MC events (parts) of this collision per cell.
     // Key = (subsystem, cell index): the cell index (SDigit::getIndex) is unique inside each subsystem.
     std::map<std::tuple<int, int>, o2::focal::LabeledSDigit> digitsInCollision;
+    std::vector<o2::focal::LabeledSDigit> sdigitsHCAL;
 
     for (auto& part : eventParts[collID]) {
       mSumDigitizer.setCurrEvID(part.entryID);
@@ -114,10 +121,21 @@ void DigitizerSpec::run(framework::ProcessingContext& ctx)
       for (const auto& label : labeledDigit.getLabels()) {
         labelsOut.addElement(digitIndex, label);
       }
+
+      // Build vector of HCAL SDigits
+      if (labeledDigit.getSubsystem() == SDigit::kHCAL) {
+        sdigitsHCAL.push_back(labeledDigit);
+      }
     }
     const int nDigits = digitsOut.size() - firstDigit;
     triggerRecordsOut.emplace_back(timesview[collID], firstDigit, nDigits); // all subsystems (range mAllData)
+
+    // Running HCALDigitizer
+    mHCALDigitizer.setEventTime(timesview[collID]);
+    mHCALDigitizer.process(sdigitsHCAL);
   }
+
+  mHCALDigitizer.finish();
 
   LOG(info) << "FOCAL digitizer: " << digitsOut.size() << " digits in " << triggerRecordsOut.size() << " trigger records";
 
@@ -125,6 +143,12 @@ void DigitizerSpec::run(framework::ProcessingContext& ctx)
   ctx.outputs().snapshot(Output{"FOC", "TRGRDIG", 0}, triggerRecordsOut);
   if (ctx.outputs().isAllowed({"FOC", "DIGITSMCTR", 0})) {
     ctx.outputs().snapshot(Output{"FOC", "DIGITSMCTR", 0}, labelsOut);
+  }
+
+  ctx.outputs().snapshot(Output{"FOC", "HCALDIGITS", 0}, mHCALDigitizer.getDigits());
+  ctx.outputs().snapshot(Output{"FOC", "HCALTRGR", 0}, mHCALDigitizer.getTriggerRecords());
+  if (ctx.outputs().isAllowed({"FOC", "HCALMCTR", 0})) {
+    ctx.outputs().snapshot(Output{"FOC", "HCALMCTR", 0}, mHCALDigitizer.getMCLabels());
   }
 
   const o2::parameters::GRPObject::ROMode roMode = o2::parameters::GRPObject::TRIGGERING;
@@ -148,6 +172,12 @@ o2::framework::DataProcessorSpec getFOCALDigitizerSpec(int channel, bool mctruth
   outputs.emplace_back("FOC", "ROMode", 0, Lifetime::Timeframe);
   // Note: no "TRIGGERINPUT" output. In EMCAL it carries the EMCAL L0 trigger decisions to the CTP
   // digitizer (that is what EMCAL's first collision loop computes); FOCAL is not a CTP input.
+
+  outputs.emplace_back("FOC", "HCALDIGITS", 0, Lifetime::Timeframe);
+  outputs.emplace_back("FOC", "HCALTRGR", 0, Lifetime::Timeframe);
+  if (mctruth) {
+    outputs.emplace_back("FOC", "HCALMCTR", 0, Lifetime::Timeframe);
+  }
 
   std::vector<o2::framework::InputSpec> inputs;
   inputs.emplace_back("collisioncontext", "SIM", "COLLISIONCONTEXT", static_cast<SubSpecificationType>(channel), Lifetime::Timeframe);

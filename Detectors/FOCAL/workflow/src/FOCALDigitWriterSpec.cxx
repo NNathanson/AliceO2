@@ -6,6 +6,7 @@
 #include "DataFormatsFOCAL/SDigit.h"
 #include <DataFormatsFOCAL/MCLabel.h>
 #include "DataFormatsFOCAL/TriggerRecord.h"
+#include "DataFormatsFOCAL/Digit.h"
 
 using namespace o2::framework;
 
@@ -29,7 +30,10 @@ DataProcessorSpec getFOCALDigitWriterSpec(bool mctruth)
                                 1,
                                 BranchDefinition<std::vector<o2::focal::SDigit>>{InputSpec{"focaldigits", "FOC", "DIGITS"}, "FOCALDigit"},
                                 BranchDefinition<std::vector<o2::focal::TriggerRecord>>{InputSpec{"trgrecorddigits", "FOC", "TRGRDIG"}, "FOCALDigitTRGR"},
-                                BranchDefinition<o2::dataformats::MCTruthContainer<o2::focal::MCLabel>>{InputSpec{"focaldigitlabels", "FOC", "DIGITSMCTR"}, "FOCALDigitMCTruth", mctruth ? 1 : 0})();
+                                BranchDefinition<o2::dataformats::MCTruthContainer<o2::focal::MCLabel>>{InputSpec{"focaldigitlabels", "FOC", "DIGITSMCTR"}, "FOCALDigitMCTruth", mctruth ? 1 : 0},
+                                BranchDefinition<std::vector<o2::focal::Digit>>{InputSpec{"focalhdigits", "FOC", "HCALDIGITS"}, "FOCALHDigit"},
+                                BranchDefinition<std::vector<o2::focal::TriggerRecord>>{InputSpec{"focalhtrgrecord", "FOC", "HCALTRGR"}, "FOCALHDigitTRGR"},
+                                BranchDefinition<o2::dataformats::MCTruthContainer<o2::focal::MCLabel>>{InputSpec{"focalhdigitlabels", "FOC", "HCALMCTR"}, "FOCALHDigitMCTruth", mctruth ? 1 : 0})();
 }
 } // end namespace focal
 } // end namespace o2
