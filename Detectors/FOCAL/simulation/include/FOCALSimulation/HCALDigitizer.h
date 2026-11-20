@@ -56,6 +56,8 @@ class HCALDigitizer
   /// \param sdigits Labeled SDigits
   void process(const std::vector<o2::focal::LabeledSDigit>& sdigits);
 
+  void endDebugStream() { mDebugStream.reset(); }
+
   const std::vector<Digit>& getDigits() const { return mDigits; }
   const std::vector<TriggerRecord>& getTriggerRecords() const { return mTriggerRecords; }
   const o2::dataformats::MCTruthContainer<MCLabel>& getMCLabels() const { return mLabels; }

@@ -68,8 +68,6 @@ void HCALDigitizer::finish()
 //_______________________________________________________________________
 void HCALDigitizer::process(const std::vector<o2::focal::LabeledSDigit>& sdigits)
 {
-  auto& param = HCALSimParam::Instance();
-
   std::map<int, TowerSignal> hcalTowers;
   const int firstDigit = mDigits.size();
 
@@ -100,7 +98,7 @@ void HCALDigitizer::process(const std::vector<o2::focal::LabeledSDigit>& sdigits
     mDigits.emplace_back(towerID, 0, 0, 0, 0); // TODO WHEN WRITTEN: remove placeholder 0s and instead put values returned by the HGCROCResponse class
     mLabels.addElements(digitIndex, tower.labels);
 
-    if (param.mDebugStream) {
+    if (mDebugStream) {
       auto [row, col] = hcalIndex.getRowColFromIndex(towerID);
       (*mDebugStream).GetFile()->cd();
       (*mDebugStream) << "HCALTowers"
@@ -127,7 +125,12 @@ std::map<int, HCALDigitizer::TowerSignal> HCALDigitizer::applyBoardCrosstalk(con
   std::map<int, TowerSignal> meanPhotoelectronsXT = meanPhotoelectrons;
 
   auto& param = HCALSimParam::Instance();
-  float xt = param.mBoardCrosstalk;
+  double xt = param.mBoardCrosstalk;
+
+  // When no crosstalk is considered in SimParam, return here to prevent the creation of unnecessary crosstalk-only digits that shouldn't be made
+  if (xt == 0) {
+    return meanPhotoelectronsXT;
+  }
 
   // First pass through tower map: reduce each tower's meanPe to account for the photoelectrons lost to crosstalk
   for (const auto& [towerID, tower] : meanPhotoelectrons) {

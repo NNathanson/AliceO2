@@ -136,6 +136,7 @@ void DigitizerSpec::run(framework::ProcessingContext& ctx)
   }
 
   mHCALDigitizer.finish();
+  mHCALDigitizer.endDebugStream();
 
   LOG(info) << "FOCAL digitizer: " << digitsOut.size() << " digits in " << triggerRecordsOut.size() << " trigger records";
 
